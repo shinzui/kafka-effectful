@@ -25,6 +25,8 @@ library
   import:             warnings
   exposed-modules:
     Kafka.Effectful
+    Kafka.Effectful.Consumer.Effect
+    Kafka.Effectful.Consumer.Interpreter
     Kafka.Effectful.Producer.Effect
     Kafka.Effectful.Producer.Interpreter
 
