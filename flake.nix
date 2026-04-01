@@ -40,6 +40,7 @@
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [
             pkgs.zlib
+            pkgs.rdkafka
             pkgs.just
             pkgs.cabal-install
             pkgs.pkg-config
