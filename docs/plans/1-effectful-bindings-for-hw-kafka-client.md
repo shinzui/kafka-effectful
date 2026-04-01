@@ -25,15 +25,30 @@ producer and consumer effects wired into an `Eff` computation.
 
 ## Progress
 
-- [ ] Milestone 1: Project scaffold (cabal file, directory structure, flake.nix updates)
-- [ ] Milestone 2: Producer effect and interpreter
-- [ ] Milestone 3: Consumer effect and interpreter
-- [ ] Milestone 4: Facade re-export module and validation
+- [x] Milestone 1: Project scaffold (cabal file, directory structure, flake.nix updates) — 2026-04-01
+- [x] Milestone 2: Producer effect and interpreter — 2026-04-01
+- [x] Milestone 3: Consumer effect and interpreter — 2026-04-01
+- [x] Milestone 4: Facade re-export module and validation — 2026-04-01
 
 
 ## Surprises & Discoveries
 
-(None yet.)
+- `produceMessageBatch` is not exported from `Kafka.Producer` in hw-kafka-client 5.3.0 on
+  Hackage, despite being present in the user's local source checkout. The function was
+  likely added after the 5.3.0 release. Removed `ProduceMessageBatch` from the effect GADT.
+
+- `Kafka.Consumer.Callbacks` and `Kafka.Producer.Callbacks` are hidden modules in
+  hw-kafka-client. They are re-exported through `Kafka.Consumer.ConsumerProperties` and
+  `Kafka.Producer.ProducerProperties` respectively. The facade modules import callbacks
+  through the properties modules.
+
+- `pausePartitions` and `resumePartitions` return a bare `KafkaError` (always wrapping
+  `KafkaResponseError`), not `Maybe KafkaError`. The interpreter checks for `RdKafkaRespErrNoError`
+  (enum value 0) to distinguish success from failure.
+
+- The `EffectHandler` type alias in effectful-core 2.6 triggers a `-Wredundant-constraints`
+  warning about `e :> localEs` when the handler's own constraints are declared. This is a
+  known quirk and does not affect correctness.
 
 
 ## Decision Log
@@ -94,10 +109,35 @@ producer and consumer effects wired into an `Eff` computation.
   file provides a proven, consistent baseline for extensions and warnings.
   Date: 2026-04-01
 
+- Decision: Drop `ProduceMessageBatch` from the effect — `produceMessageBatch` is not
+  exported in hw-kafka-client 5.3.0 on Hackage.
+  Rationale: The function exists in the user's local source but was not included in the
+  5.3.0 Hackage release. Building against Hackage is the correct default.
+  Date: 2026-04-01
+
+- Decision: Use `bracket` + `interpret` rather than `reinterpret` with a helper static
+  effect for resource management.
+  Rationale: Simpler to implement. `bracket` acquires the handle before entering `interpret`
+  and ensures cleanup. The handle is captured in the `handleProducer`/`handleConsumer`
+  closures. No need for `StaticRep` machinery since the handle is not accessed outside
+  the handler.
+  Date: 2026-04-01
+
 
 ## Outcomes & Retrospective
 
-(To be filled during and after implementation.)
+All four milestones completed. The package compiles cleanly under GHC 9.12.2 with GHC2024
+and all warnings enabled. The only warnings are from the `EffectHandler` type alias in
+effectful-core triggering `-Wredundant-constraints` — these are upstream and not actionable.
+
+The package provides 7 modules:
+- `Kafka.Effectful` — combined facade
+- `Kafka.Effectful.Producer` / `Kafka.Effectful.Consumer` — scoped facades
+- `Kafka.Effectful.Producer.Effect` / `Kafka.Effectful.Consumer.Effect` — effect GADTs
+- `Kafka.Effectful.Producer.Interpreter` / `Kafka.Effectful.Consumer.Interpreter` — handlers
+
+Future work: add `ProduceMessageBatch` when hw-kafka-client exports it, transaction API,
+metadata queries, topic management, and OpenTelemetry-traced interpreter variants.
 
 
 ## Context and Orientation
