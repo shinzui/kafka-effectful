@@ -1,3 +1,9 @@
+-- The 'EffectHandler' type synonym in effectful-core expands to a
+-- constraint that GHC's redundant-constraint check flags on the
+-- handler's signature, even though the constraint is required for
+-- 'interpret' to type-check. Suppress the warning at the file level.
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
 module Kafka.Effectful.Producer.Interpreter (
     -- * Interpreter
     runKafkaProducer,

@@ -44,9 +44,9 @@ direct pattern matches on `RdKafkaRespErrNoError` rather than a
 - [x] Restructure `runKafkaConsumer` in `src/Kafka/Effectful/Consumer/Interpreter.hs` to acquire inside `bracket`. (2026-04-16)
 - [x] Adjust consumer close-error handling via `Effectful.Exception.generalBracket` so close failures do not mask user-action exceptions. (2026-04-16)
 - [x] Add a `throwOnKafkaErr` helper in `Consumer/Interpreter.hs` and use it from the `PausePartitions` and `ResumePartitions` branches; remove the `toEnum 0` idiom. (2026-04-16)
-- [ ] Suppress the `-Wredundant-constraints` warning for both interpreter modules (per-file `OPTIONS_GHC` pragma, or a dedicated cabal stanza — the plan uses the per-file pragma).
-- [ ] Run `cabal build` and confirm it completes with zero warnings.
-- [ ] Write Outcomes & Retrospective.
+- [x] Suppress the `-Wredundant-constraints` warning for both interpreter modules via per-file `{-# OPTIONS_GHC -Wno-redundant-constraints #-}` pragma. (2026-04-16)
+- [x] Run `cabal clean && cabal build` and confirm it completes with zero warnings. (2026-04-16)
+- [x] Write Outcomes & Retrospective. (2026-04-16)
 
 
 ## Surprises & Discoveries
@@ -84,7 +84,39 @@ direct pattern matches on `RdKafkaRespErrNoError` rather than a
 
 ## Outcomes & Retrospective
 
-(To be filled during and after implementation.)
+All four milestones landed cleanly across three commits (one per
+behavior change; milestone 4's pragma suppression is bundled with the
+final validation).
+
+- The producer and consumer handles are now acquired *inside*
+  `Exception.bracket`'s acquisition action, eliminating the
+  async-exception window between handle creation and the bracket mask.
+- `runKafkaConsumer` uses `Effectful.Exception.generalBracket` so a
+  failing user action inside the consumer scope surfaces the user's
+  exception, while a `closeConsumer` failure on a clean exit is still
+  raised through the `Error KafkaError` effect. `generalBracket` and
+  `ExitCase(..)` are both re-exported by effectful-core 2.6 and
+  required no new dependency.
+- `PausePartitions` and `ResumePartitions` now route through a local
+  `throwOnKafkaErr` helper that pattern-matches on
+  `RdKafkaRespErrNoError` directly, replacing the brittle
+  `rdErr == toEnum 0` comparison.
+- A per-file `{-# OPTIONS_GHC -Wno-redundant-constraints #-}` pragma
+  with an explanatory comment was added at the top of both interpreter
+  modules. `cabal clean && cabal build` now finishes with no warning
+  lines from any module in the package.
+
+No public type or function signature changed. The plan's expected
+acceptance criteria all hold:
+
+1. `cabal clean && cabal build` prints no warnings.
+2. `grep "toEnum 0" src/Kafka/Effectful` returns no matches.
+3. Both interpreter files begin with the suppressing pragma and a
+   short explanatory comment.
+4. `K.newProducer` / `K.newConsumer` live inside the bracket
+   acquisition action.
+5. The consumer's release path uses `generalBracket` and only raises
+   close errors when the body completed via `ExitCaseSuccess`.
 
 
 ## Context and Orientation
