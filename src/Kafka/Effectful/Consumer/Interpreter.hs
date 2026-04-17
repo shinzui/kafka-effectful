@@ -4,11 +4,13 @@ module Kafka.Effectful.Consumer.Interpreter (
 )
 where
 
+import Control.Monad (void)
 import Data.Foldable (for_)
 import Effectful (Eff, IOE, (:>))
 import Effectful qualified
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
 import Effectful.Error.Static (Error, throwError)
+import Effectful.Exception (ExitCase (..))
 import Effectful.Exception qualified as Exception
 import Kafka.Consumer (RdKafkaRespErrT (..))
 import Kafka.Consumer qualified as K
@@ -30,10 +32,11 @@ runKafkaConsumer ::
     Eff (KafkaConsumer : es) a ->
     Eff es a
 runKafkaConsumer props sub action =
-    Exception.bracket
-        acquire
-        release
-        (\consumer -> interpret (handleConsumer consumer) action)
+    fst
+        <$> Exception.generalBracket
+            acquire
+            release
+            (\consumer -> interpret (handleConsumer consumer) action)
   where
     acquire = do
         result <- Effectful.liftIO $ K.newConsumer props sub
@@ -41,9 +44,14 @@ runKafkaConsumer props sub action =
             Left err -> throwError err
             Right consumer -> pure consumer
 
-    release consumer = do
-        mbErr <- Effectful.liftIO $ K.closeConsumer consumer
-        for_ mbErr throwError
+    release consumer = \case
+        ExitCaseSuccess _ -> do
+            mbErr <- Effectful.liftIO $ K.closeConsumer consumer
+            for_ mbErr throwError
+        ExitCaseException _ ->
+            Effectful.liftIO . void $ K.closeConsumer consumer
+        ExitCaseAbort ->
+            Effectful.liftIO . void $ K.closeConsumer consumer
 
 handleConsumer ::
     (IOE :> es, Error KafkaError :> es) =>
