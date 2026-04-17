@@ -4,6 +4,8 @@ Effectful effects and interpreters for [hw-kafka-client](https://hackage.haskell
 
 Provides typed, composable `KafkaProducer` and `KafkaConsumer` effects for the [effectful](https://hackage.haskell.org/package/effectful) ecosystem.
 
+> **Status: experimental.** This package is on its first release. The API may change in breaking ways in subsequent 0.x versions. Pin to an exact version in production until 1.0 is tagged.
+
 ## Features
 
 - **KafkaProducer** -- send messages and flush the producer queue
@@ -45,6 +47,36 @@ example =
 
 `pollMessage` returns `Nothing` when the timeout elapses without a message
 arriving; non-timeout failures are thrown via the `Error KafkaError` effect.
+
+### Running it
+
+The effect handlers `runKafkaProducer` and `runKafkaConsumer` require `IOE` and
+`Error KafkaError` in the effect stack. A complete program wires them with
+`runEff` and `runError`:
+
+```haskell
+{-# LANGUAGE TypeApplications #-}
+
+import Effectful
+import Effectful.Error.Static (runError)
+import Kafka.Effectful
+
+main :: IO ()
+main = do
+  result <- runEff . runError @KafkaError $ runProgram
+  case result of
+    Left (_, err) -> putStrLn ("Kafka error: " <> show err)
+    Right ()      -> pure ()
+  where
+    runProgram =
+      runKafkaProducer producerProps $ do
+        produceMessage record
+        flushProducer
+```
+
+Replace `producerProps` and `record` with your own `ProducerProperties` and
+`ProducerRecord` values (see the `Kafka.Effectful.Producer` module for the
+available builders).
 
 ## Module Structure
 
