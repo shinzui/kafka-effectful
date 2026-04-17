@@ -43,7 +43,7 @@ direct pattern matches on `RdKafkaRespErrNoError` rather than a
 - [x] Restructure `runKafkaProducer` in `src/Kafka/Effectful/Producer/Interpreter.hs` so that `newProducer` lives inside `Exception.bracket`'s acquisition action. (2026-04-16)
 - [x] Restructure `runKafkaConsumer` in `src/Kafka/Effectful/Consumer/Interpreter.hs` to acquire inside `bracket`. (2026-04-16)
 - [x] Adjust consumer close-error handling via `Effectful.Exception.generalBracket` so close failures do not mask user-action exceptions. (2026-04-16)
-- [ ] Add a `throwOnKafkaErr` helper in `Consumer/Interpreter.hs` and use it from the `PausePartitions` and `ResumePartitions` branches; remove the `toEnum 0` idiom.
+- [x] Add a `throwOnKafkaErr` helper in `Consumer/Interpreter.hs` and use it from the `PausePartitions` and `ResumePartitions` branches; remove the `toEnum 0` idiom. (2026-04-16)
 - [ ] Suppress the `-Wredundant-constraints` warning for both interpreter modules (per-file `OPTIONS_GHC` pragma, or a dedicated cabal stanza — the plan uses the per-file pragma).
 - [ ] Run `cabal build` and confirm it completes with zero warnings.
 - [ ] Write Outcomes & Retrospective.

@@ -72,18 +72,10 @@ handleConsumer consumer _env = \case
     StoreOffsets tps -> throwOnJust $ K.storeOffsets consumer tps
     StoreOffsetMessage cr -> throwOnJust $ K.storeOffsetMessage consumer cr
     Assign tps -> throwOnJust $ K.assign consumer tps
-    PausePartitions parts -> do
-        err <- Effectful.liftIO $ K.pausePartitions consumer parts
-        case err of
-            KafkaResponseError rdErr
-                | rdErr == toEnum 0 -> pure ()
-            _ -> throwError err
-    ResumePartitions parts -> do
-        err <- Effectful.liftIO $ K.resumePartitions consumer parts
-        case err of
-            KafkaResponseError rdErr
-                | rdErr == toEnum 0 -> pure ()
-            _ -> throwError err
+    PausePartitions parts ->
+        throwOnKafkaErr (K.pausePartitions consumer parts)
+    ResumePartitions parts ->
+        throwOnKafkaErr (K.resumePartitions consumer parts)
     SeekPartitions tps timeout -> throwOnJust $ K.seekPartitions consumer tps timeout
     Committed timeout parts -> throwOnLeft $ K.committed consumer timeout parts
     Position parts -> throwOnLeft $ K.position consumer parts
@@ -99,3 +91,9 @@ handleConsumer consumer _env = \case
         case result of
             Left err -> throwError err
             Right a -> pure a
+
+    throwOnKafkaErr action' = do
+        err <- Effectful.liftIO action'
+        case err of
+            KafkaResponseError RdKafkaRespErrNoError -> pure ()
+            _ -> throwError err
