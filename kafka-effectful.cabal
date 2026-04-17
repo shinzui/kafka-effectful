@@ -1,18 +1,25 @@
-cabal-version: 3.4
-name:          kafka-effectful
-version:       0.1.0.0
-synopsis:      Effectful effects for hw-kafka-client
+cabal-version:   3.4
+name:            kafka-effectful
+version:         0.1.0.0
+synopsis:        Effectful effects for hw-kafka-client
 description:
   Effectful effects and interpreters for hw-kafka-client, a Haskell
   binding to Apache Kafka via librdkafka. Provides typed, composable
   KafkaProducer and KafkaConsumer effects.
 
-license:       MIT
-license-file:  LICENSE
-author:        Nadeem Bitar
-maintainer:    Nadeem Bitar
-category:      Kafka
-build-type:    Simple
+license:         MIT
+license-file:    LICENSE
+author:          Nadeem Bitar
+maintainer:      Nadeem Bitar
+category:        Network, Messaging
+build-type:      Simple
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+source-repository head
+  type:     git
+  location: https://github.com/shinzui/kafka-effectful.git
 
 common warnings
   ghc-options:
@@ -36,7 +43,7 @@ library
     , base             >=4.21 && <5
     , bytestring       >=0.11 && <0.13
     , containers       >=0.6  && <0.8
-    , effectful-core   ^>=2.5 || ^>=2.6
+    , effectful-core   >=2.5  && <2.7
     , hw-kafka-client  >=5.3  && <6
     , text             >=2.0  && <2.2
 
