@@ -25,15 +25,17 @@ runKafkaProducer ::
     ProducerProperties ->
     Eff (KafkaProducer : es) a ->
     Eff es a
-runKafkaProducer props action = do
-    result <- Effectful.liftIO $ K.newProducer props
-    case result of
-        Left err -> throwError err
-        Right producer ->
-            Exception.bracket
-                (pure producer)
-                (Effectful.liftIO . K.closeProducer)
-                (\p -> interpret (handleProducer p) action)
+runKafkaProducer props action =
+    Exception.bracket
+        acquire
+        (Effectful.liftIO . K.closeProducer)
+        (\producer -> interpret (handleProducer producer) action)
+  where
+    acquire = do
+        result <- Effectful.liftIO $ K.newProducer props
+        case result of
+            Left err -> throwError err
+            Right producer -> pure producer
 
 handleProducer ::
     (IOE :> es, Error KafkaError :> es) =>

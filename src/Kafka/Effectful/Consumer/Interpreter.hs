@@ -29,18 +29,21 @@ runKafkaConsumer ::
     Subscription ->
     Eff (KafkaConsumer : es) a ->
     Eff es a
-runKafkaConsumer props sub action = do
-    result <- Effectful.liftIO $ K.newConsumer props sub
-    case result of
-        Left err -> throwError err
-        Right consumer ->
-            Exception.bracket
-                (pure consumer)
-                ( \c -> do
-                    mbErr <- Effectful.liftIO $ K.closeConsumer c
-                    for_ mbErr throwError
-                )
-                (\c -> interpret (handleConsumer c) action)
+runKafkaConsumer props sub action =
+    Exception.bracket
+        acquire
+        release
+        (\consumer -> interpret (handleConsumer consumer) action)
+  where
+    acquire = do
+        result <- Effectful.liftIO $ K.newConsumer props sub
+        case result of
+            Left err -> throwError err
+            Right consumer -> pure consumer
+
+    release consumer = do
+        mbErr <- Effectful.liftIO $ K.closeConsumer consumer
+        for_ mbErr throwError
 
 handleConsumer ::
     (IOE :> es, Error KafkaError :> es) =>
