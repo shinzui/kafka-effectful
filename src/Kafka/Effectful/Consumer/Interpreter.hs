@@ -10,6 +10,7 @@ import Effectful qualified
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
 import Effectful.Error.Static (Error, throwError)
 import Effectful.Exception qualified as Exception
+import Kafka.Consumer (RdKafkaRespErrT (..))
 import Kafka.Consumer qualified as K
 import Kafka.Consumer.ConsumerProperties (ConsumerProperties)
 import Kafka.Consumer.Subscription (Subscription)
@@ -49,8 +50,9 @@ handleConsumer consumer _env = \case
     PollMessage timeout -> do
         result <- Effectful.liftIO $ K.pollMessage consumer timeout
         case result of
+            Left (KafkaResponseError RdKafkaRespErrTimedOut) -> pure Nothing
             Left err -> throwError err
-            Right msg -> pure msg
+            Right msg -> pure (Just msg)
     PollMessageBatch timeout batchSize ->
         Effectful.liftIO $ K.pollMessageBatch consumer timeout batchSize
     CommitOffsetMessage oc cr -> throwOnJust $ K.commitOffsetMessage oc consumer cr

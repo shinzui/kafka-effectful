@@ -32,10 +32,19 @@ import Kafka.Effectful
 
 example :: (IOE :> es, Error KafkaError :> es) => Eff es ()
 example =
-  runKafkaConsumer consumerProps subscription $ do
-    msg <- pollMessage (Timeout 1000)
-    commitOffsetMessage OffsetCommit msg
+  runKafkaConsumer consumerProps subscription loop
+  where
+    loop = do
+      mbMsg <- pollMessage (Timeout 1000)
+      case mbMsg of
+        Nothing  -> loop
+        Just msg -> do
+          commitOffsetMessage OffsetCommit msg
+          loop
 ```
+
+`pollMessage` returns `Nothing` when the timeout elapses without a message
+arriving; non-timeout failures are thrown via the `Error KafkaError` effect.
 
 ## Module Structure
 

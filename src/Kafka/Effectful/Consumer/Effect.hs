@@ -49,7 +49,7 @@ import Kafka.Types (
 data KafkaConsumer :: Effect where
     PollMessage ::
         Timeout ->
-        KafkaConsumer m (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+        KafkaConsumer m (Maybe (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
     PollMessageBatch ::
         Timeout ->
         BatchSize ->
@@ -100,11 +100,16 @@ type instance DispatchOf KafkaConsumer = 'Dynamic
 
 -- Polling
 
--- | Poll for a single message. Throws 'KafkaError' on failure (including timeout).
+{- | Poll for a single message.
+
+Returns 'Nothing' when the timeout elapses without a message arriving.
+Throws 'KafkaError' via the 'Error' effect for any non-timeout failure
+(for example, a broker transport error or an assignment revocation).
+-}
 pollMessage ::
     (KafkaConsumer :> es) =>
     Timeout ->
-    Eff es (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+    Eff es (Maybe (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
 pollMessage = send . PollMessage
 
 -- | Poll for a batch of messages. Per-message errors are preserved in the 'Either'.
