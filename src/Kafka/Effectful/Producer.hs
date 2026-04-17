@@ -32,6 +32,9 @@ module Kafka.Effectful.Producer (
 
     -- * Callbacks
     K.deliveryCallback,
+    K.errorCallback,
+    K.logCallback,
+    K.statsCallback,
     K.Callback,
 
     -- * Common Types

@@ -69,6 +69,9 @@ module Kafka.Effectful.Consumer (
     -- * Callbacks
     K.rebalanceCallback,
     K.offsetCommitCallback,
+    K.errorCallback,
+    K.logCallback,
+    K.statsCallback,
     K.Callback,
 
     -- * Common Types
