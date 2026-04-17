@@ -13,8 +13,8 @@ user-invocable: true
 You are managing master plans (MasterPlans) — coordination documents that decompose large initiatives into multiple ExecPlans with defined dependencies and integration points. Before doing anything, read the full specifications:
 
 - [MASTERPLAN.md](MASTERPLAN.md) — requirements for MasterPlan documents
-- [ExecPlan specification](../exec-plan/PLANS.md) — requirements for child ExecPlan documents
-- [ExecPlan skill](../exec-plan/SKILL.md) — the ExecPlan skeleton and implementation protocol
+- [ExecPlan specification](../{{exec-plan.skill.name}}/PLANS.md) — requirements for child ExecPlan documents
+- [ExecPlan skill](../{{exec-plan.skill.name}}/SKILL.md) — the ExecPlan skeleton and implementation protocol
 
 Follow all three to the letter.
 
@@ -68,7 +68,7 @@ Create a new MasterPlan and all its child ExecPlans. The remaining arguments des
 5. Create each child ExecPlan in `docs/plans/` following the ExecPlan specification and skeleton. Each child plan must:
 
    - Include `MasterPlan: <path>` immediately after its title heading.
-   - Be fully self-contained per `claude/skills/exec-plan/PLANS.md` — a novice with only the child plan and the working tree must be able to implement it end-to-end.
+   - Be fully self-contained per `claude/skills/{{exec-plan.skill.name}}/PLANS.md` — a novice with only the child plan and the working tree must be able to implement it end-to-end.
    - Reference other child plans only by file path when describing dependencies or integration points, never by assumed shared context.
    - Include all relevant codebase context discovered during research, even if it overlaps with other child plans. Self-containment takes precedence over avoiding repetition.
 
@@ -93,7 +93,7 @@ Implement child ExecPlans under an existing MasterPlan. The first argument is th
 
 3. Update the child plan's status to In Progress in the MasterPlan's Exec-Plan Registry.
 
-4. Read the child ExecPlan file. Follow the implementation protocol described in `claude/skills/exec-plan/SKILL.md` (Mode: implement) to carry out the work. This means: identify the current state from the Progress section, proceed step by step through milestones, update the child plan's living sections at every stopping point, resolve ambiguities autonomously, and commit frequently. Every commit must include both `MasterPlan:` and `ExecPlan:` git trailers.
+4. Read the child ExecPlan file. Follow the implementation protocol described in `claude/skills/{{exec-plan.skill.name}}/SKILL.md` (Mode: implement) to carry out the work. This means: identify the current state from the Progress section, proceed step by step through milestones, update the child plan's living sections at every stopping point, resolve ambiguities autonomously, and commit frequently. Every commit must include both `MasterPlan:` and `ExecPlan:` git trailers.
 
 5. After completing the child plan:
 
@@ -166,12 +166,10 @@ When creating a new master plan, use this structure. Every section is mandatory.
 
     # <Initiative Title>
 
-    Intention: <IntentionId or omit line if none>
-
     This MasterPlan is a living document. The sections Progress, Surprises & Discoveries,
     Decision Log, and Outcomes & Retrospective must be kept up to date as work proceeds.
 
-    This document is maintained in accordance with `claude/skills/master-plan/MASTERPLAN.md`.
+    This document is maintained in accordance with `claude/skills/{{mp.skill.name}}/MASTERPLAN.md`.
 
 
     ## Vision & Scope
@@ -251,6 +249,8 @@ When creating a new master plan, use this structure. Every section is mandatory.
     Compare the result against the original vision.
 
     (To be filled during and after implementation.)
+# --- seihou:master-plan ---
+
 
 
 ## Intention Tracking
@@ -262,11 +262,19 @@ When starting work in **create** or **implement** mode, use the `AskUserQuestion
 
 If the user provides an Intention ID, store it for the duration of the session and:
 
-1. Add it to the top of the MasterPlan document (after the title heading, as shown in the skeleton).
+1. **Add it to the top of the MasterPlan.** When creating a new MasterPlan, include the Intention ID immediately after the title heading:
 
-2. Propagate it to every child ExecPlan created during this session (each child plan gets the same `Intention:` line after its title).
+        # <Initiative Title>
 
-3. Include an `Intention:` git trailer on every commit alongside the other trailers:
+        Intention: <IntentionId>
+
+        This MasterPlan is a living document. ...
+
+    When working with an existing MasterPlan that does not yet have an `Intention:` line, insert it in the same position (after the title, before the living-document preamble).
+
+2. **Propagate it to every child ExecPlan** created during this session. Each child plan gets the same `Intention:` line after its title heading.
+
+3. **Include an `Intention:` git trailer on every commit** alongside the other trailers:
 
         Implement consumer group rebalance handling
 
@@ -277,3 +285,4 @@ If the user provides an Intention ID, store it for the duration of the session a
         Intention: INTENT-42
 
 Ask once at the start of a session. Do not ask again on subsequent operations within the same session. If the user skips or declines, proceed without the trailer.
+# --- /seihou:master-plan ---
