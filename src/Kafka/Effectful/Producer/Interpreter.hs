@@ -4,6 +4,7 @@ module Kafka.Effectful.Producer.Interpreter (
 )
 where
 
+import Data.Foldable (for_)
 import Effectful (Eff, IOE, (:>))
 import Effectful qualified
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
@@ -31,7 +32,7 @@ runKafkaProducer props action = do
         Right producer ->
             Exception.bracket
                 (pure producer)
-                (\p -> Effectful.liftIO $ K.closeProducer p)
+                (Effectful.liftIO . K.closeProducer)
                 (\p -> interpret (handleProducer p) action)
 
 handleProducer ::
@@ -41,8 +42,6 @@ handleProducer ::
 handleProducer producer _env = \case
     ProduceMessage record -> do
         mbErr <- Effectful.liftIO $ K.produceMessage producer record
-        case mbErr of
-            Nothing -> pure ()
-            Just err -> throwError err
+        for_ mbErr throwError
     FlushProducer ->
         Effectful.liftIO $ K.flushProducer producer

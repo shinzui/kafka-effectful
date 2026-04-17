@@ -4,6 +4,7 @@ module Kafka.Effectful.Consumer.Interpreter (
 )
 where
 
+import Data.Foldable (for_)
 import Effectful (Eff, IOE, (:>))
 import Effectful qualified
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
@@ -36,9 +37,7 @@ runKafkaConsumer props sub action = do
                 (pure consumer)
                 ( \c -> do
                     mbErr <- Effectful.liftIO $ K.closeConsumer c
-                    case mbErr of
-                        Nothing -> pure ()
-                        Just err -> throwError err
+                    for_ mbErr throwError
                 )
                 (\c -> interpret (handleConsumer c) action)
 
@@ -80,9 +79,7 @@ handleConsumer consumer _env = \case
   where
     throwOnJust action' = do
         mbErr <- Effectful.liftIO action'
-        case mbErr of
-            Nothing -> pure ()
-            Just err -> throwError err
+        for_ mbErr throwError
 
     throwOnLeft action' = do
         result <- Effectful.liftIO action'
