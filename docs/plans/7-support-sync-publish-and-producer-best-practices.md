@@ -87,8 +87,8 @@ branching for each of the three error classes.
       (2026-04-22)
 - [x] Milestone 5: example programs under the `examples` cabal flag.
       (2026-04-22)
-- [ ] Milestone 6: full-repo validation — `cabal build`, `cabal sdist`, and
-      example programs compile.
+- [x] Milestone 6: full-repo validation — `cabal build`, `cabal sdist`, and
+      example programs compile. (2026-04-22)
 
 
 ## Surprises & Discoveries
@@ -206,7 +206,55 @@ branching for each of the three error classes.
 
 ## Outcomes & Retrospective
 
-(To be filled during and after implementation.)
+Completed 2026-04-22 across six commits (`da52b0b`, `75a6103`,
+`74cf4f4`, `ad9ce87`, `4168128`, and the closing commit that lands
+this section). Every milestone met its acceptance criteria:
+
+-   **Milestone 1** shipped `produceMessage'` and `produceMessageSync`
+    with the interpreter that allocates an `MVar`, flushes the
+    producer, and dispatches on the resulting `DeliveryReport`.
+-   **Milestone 2** shipped `produceMessageBatch`. Because Hackage
+    `hw-kafka-client-5.3.0` does not export
+    `Kafka.Producer.produceMessageBatch`, the interpreter inlines the
+    upstream definition (see Surprises & Discoveries). The effect
+    signature is unchanged.
+-   **Milestone 3** shipped the five transaction operations plus
+    `sendOffsetsToTransaction`, the escape-hatch accessors
+    `askProducerHandle` / `askConsumerHandle`, and the cross-effect
+    helper `Kafka.Effectful.Producer.Transaction.commitOffsetMessageTransaction`.
+-   **Milestone 4** updated both scoped facades and the combined
+    facade, added `@since 0.2.0.0` Haddocks to every new operation,
+    wrote the eight-scenario README walkthrough, and landed an
+    Unreleased block in `CHANGELOG.md`. `cabal haddock` produces no
+    missing-link warnings on any new operation; the remaining
+    `'Error'` warnings were pre-existing.
+-   **Milestone 5** added the `examples` cabal flag plus
+    `examples/SyncPublish.hs` (Scenario 2) and
+    `examples/TransactionalEtl.hs` (Scenario 5 with full
+    `TxError`-dispatch). Both build under `cabal build -fexamples`.
+-   **Milestone 6** ran `cabal clean && cabal build` (no warnings),
+    `cabal haddock`, `cabal sdist` (tarball at
+    `dist-newstyle/sdist/kafka-effectful-0.1.0.0.tar.gz`), and
+    `cabal build -fexamples` — all succeed.
+
+Deferred: live-broker integration testing (`kcat` round-trip,
+SIGKILL mid-batch restart for the transactional example). The plan
+explicitly permits this deferral when no broker is available. The
+README and the top-of-file comment in `TransactionalEtl.hs`
+document the commands to run when one is.
+
+Lessons learned:
+
+-   The Hackage artefact for a pinned version can lag the upstream
+    repository's current source. Decision Log entry 2 anticipated
+    this — the fallback was in place and no rework was needed.
+-   Haddock treats ticked references strictly: any identifier not
+    imported into the module of the docstring produces a warning.
+    For symbols reachable only via interpreter-side imports or
+    qualified module paths, use `@...@` code markup instead.
+-   Treefmt's pre-commit hook reformats files after `git add`; a
+    second `git add -A && git commit` cycle clears the reformat
+    delta. Worth knowing but unremarkable.
 
 
 ## Context and Orientation
