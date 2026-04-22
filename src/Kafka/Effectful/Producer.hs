@@ -7,6 +7,8 @@ module Kafka.Effectful.Producer (
 
     -- * Operations
     produceMessage,
+    produceMessage',
+    produceMessageSync,
     flushProducer,
 
     -- * Types
@@ -52,7 +54,7 @@ module Kafka.Effectful.Producer (
 )
 where
 
-import Kafka.Effectful.Producer.Effect (KafkaProducer, flushProducer, produceMessage)
+import Kafka.Effectful.Producer.Effect (KafkaProducer, flushProducer, produceMessage, produceMessage', produceMessageSync)
 import Kafka.Effectful.Producer.Interpreter (runKafkaProducer)
 import Kafka.Producer.ProducerProperties (ProducerProperties (..))
 import Kafka.Producer.ProducerProperties qualified as K

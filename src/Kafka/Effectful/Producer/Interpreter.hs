@@ -10,6 +10,7 @@ module Kafka.Effectful.Producer.Interpreter (
 )
 where
 
+import Control.Concurrent.MVar qualified as Concurrent
 import Data.Foldable (for_)
 import Effectful (Eff, IOE, (:>))
 import Effectful qualified
@@ -51,5 +52,24 @@ handleProducer producer _env = \case
     ProduceMessage record -> do
         mbErr <- Effectful.liftIO $ K.produceMessage producer record
         for_ mbErr throwError
+    ProduceMessage' record cb -> do
+        res <- Effectful.liftIO $ K.produceMessage' producer record cb
+        case res of
+            Left (K.ImmediateError err) -> throwError err
+            Right () -> pure ()
+    ProduceMessageSync record -> do
+        var <- Effectful.liftIO Concurrent.newEmptyMVar
+        res <-
+            Effectful.liftIO $
+                K.produceMessage' producer record (Concurrent.putMVar var)
+        case res of
+            Left (K.ImmediateError err) -> throwError err
+            Right () -> do
+                Effectful.liftIO $ K.flushProducer producer
+                report <- Effectful.liftIO $ Concurrent.takeMVar var
+                case report of
+                    K.DeliverySuccess _ offset -> pure offset
+                    K.DeliveryFailure _ err -> throwError err
+                    K.NoMessageError err -> throwError err
     FlushProducer ->
         Effectful.liftIO $ K.flushProducer producer
