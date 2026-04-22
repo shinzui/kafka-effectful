@@ -6,6 +6,7 @@ module Kafka.Effectful.Producer.Effect (
     produceMessage,
     produceMessage',
     produceMessageSync,
+    produceMessageBatch,
     flushProducer,
 )
 where
@@ -14,6 +15,7 @@ import Effectful (Dispatch (..), DispatchOf, Eff, Effect, (:>))
 import Effectful.Dispatch.Dynamic (send)
 import Kafka.Consumer.Types (Offset)
 import Kafka.Producer.Types (DeliveryReport, ProducerRecord)
+import Kafka.Types (KafkaError)
 
 -- | Effect for Kafka producer operations.
 data KafkaProducer :: Effect where
@@ -27,6 +29,9 @@ data KafkaProducer :: Effect where
     ProduceMessageSync ::
         ProducerRecord ->
         KafkaProducer m Offset
+    ProduceMessageBatch ::
+        [ProducerRecord] ->
+        KafkaProducer m [(ProducerRecord, KafkaError)]
     FlushProducer ::
         KafkaProducer m ()
 
@@ -75,6 +80,24 @@ produceMessageSync ::
     ProducerRecord ->
     Eff es Offset
 produceMessageSync = send . ProduceMessageSync
+
+{- | Send many records in one call.
+
+Returns only the records that failed to enqueue, paired with the
+error librdkafka reported for that record. Successful records are
+omitted. This mirrors @Kafka.Producer.produceMessageBatch@.
+
+Combined with @linger.ms@ and @batch.size@ set on the
+'ProducerProperties', this is the throughput-oriented path — Scenario
+4 of @hw-kafka-client@'s producer best practices.
+
+@since 0.2.0.0
+-}
+produceMessageBatch ::
+    (KafkaProducer :> es) =>
+    [ProducerRecord] ->
+    Eff es [(ProducerRecord, KafkaError)]
+produceMessageBatch = send . ProduceMessageBatch
 
 -- | Flush the producer's outbound queue, blocking until all messages are sent.
 flushProducer :: (KafkaProducer :> es) => Eff es ()

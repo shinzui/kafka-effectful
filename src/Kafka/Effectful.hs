@@ -4,6 +4,7 @@ module Kafka.Effectful (
     runKafkaProducer,
     produceMessage,
     produceMessageSync,
+    produceMessageBatch,
     flushProducer,
 
     -- * Consumer Effect
@@ -122,6 +123,7 @@ import Kafka.Effectful.Producer (
     ProducerRecord (..),
     flushProducer,
     produceMessage,
+    produceMessageBatch,
     produceMessageSync,
     runKafkaProducer,
  )

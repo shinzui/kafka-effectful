@@ -57,6 +57,13 @@ handleProducer producer _env = \case
         case res of
             Left (K.ImmediateError err) -> throwError err
             Right () -> pure ()
+    ProduceMessageBatch records -> Effectful.liftIO $ do
+        -- Hackage hw-kafka-client-5.3.0 does not export
+        -- 'Kafka.Producer.produceMessageBatch', so we inline the same
+        -- definition it ships on master: mapM over the list and keep
+        -- only the records that failed to enqueue.
+        results <- mapM (\r -> (r,) <$> K.produceMessage producer r) records
+        pure [(r, err) | (r, Just err) <- results]
     ProduceMessageSync record -> do
         var <- Effectful.liftIO Concurrent.newEmptyMVar
         res <-

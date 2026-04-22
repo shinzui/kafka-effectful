@@ -79,7 +79,7 @@ branching for each of the three error classes.
 ## Progress
 
 - [x] Milestone 1: sync and per-message-callback publish. (2026-04-22)
-- [ ] Milestone 2: batch publish via `produceMessageBatch`.
+- [x] Milestone 2: batch publish via `produceMessageBatch`. (2026-04-22)
 - [ ] Milestone 3: transaction API exposed via producer effect plus a
       cross-effect helper for `commitOffsetMessageTransaction`.
 - [ ] Milestone 4: facade updates, Haddocks, and README scenario walk-through.
@@ -90,7 +90,28 @@ branching for each of the three error classes.
 
 ## Surprises & Discoveries
 
-(None yet.)
+-   2026-04-22 — The Hackage artefact for `hw-kafka-client-5.3.0` does
+    **not** export `Kafka.Producer.produceMessageBatch`, even though
+    the local working tree at
+    `/Users/shinzui/Keikaku/hub/haskell/hw-kafka-client-project/hw-kafka-client/src/Kafka/Producer.hs`
+    (also labelled version `5.3.0` on its cabal file) does. Building
+    the direct delegate in `Kafka.Effectful.Producer.Interpreter`
+    produced
+
+            src/Kafka/Effectful/Producer/Interpreter.hs:61:28: error: [GHC-76037]
+                Not in scope: ‘K.produceMessageBatch’
+                Note: The module ‘Kafka.Producer’ does not export
+                ‘produceMessageBatch’.
+
+    The interpreter therefore inlines the upstream definition
+    (`mapM produceMessage` filtered by `Just`) — exactly the fallback
+    the Decision Log entry of 2026-04-22 anticipated. The effect
+    signature is unchanged: `produceMessageBatch` still returns
+    `[(ProducerRecord, KafkaError)]` containing only the records that
+    failed to enqueue. When a future Hackage release of
+    `hw-kafka-client` exposes the symbol, the interpreter body can be
+    swapped to `K.produceMessageBatch producer records` with no
+    downstream impact.
 
 
 ## Decision Log
