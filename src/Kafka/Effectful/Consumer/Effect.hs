@@ -24,6 +24,9 @@ module Kafka.Effectful.Consumer.Effect (
     position,
     assignment,
     subscription,
+
+    -- * Internal — cross-effect plumbing
+    askConsumerHandle,
 )
 where
 
@@ -37,6 +40,7 @@ import Kafka.Consumer.Types (
     SubscribedPartitions,
     TopicPartition,
  )
+import Kafka.Consumer.Types qualified as KC
 import Kafka.Types (
     BatchSize,
     KafkaError,
@@ -95,6 +99,8 @@ data KafkaConsumer :: Effect where
         KafkaConsumer m (Map TopicName [PartitionId])
     Subscription ::
         KafkaConsumer m [(TopicName, SubscribedPartitions)]
+    AskConsumerHandle ::
+        KafkaConsumer m KC.KafkaConsumer
 
 type instance DispatchOf KafkaConsumer = 'Dynamic
 
@@ -186,3 +192,18 @@ assignment = send Assignment
 -- | Get the current topic subscription.
 subscription :: (KafkaConsumer :> es) => Eff es [(TopicName, SubscribedPartitions)]
 subscription = send Subscription
+
+{- | Escape hatch: return the raw @Kafka.Consumer.KafkaConsumer@ handle
+acquired by 'runKafkaConsumer'.
+
+Exposed to enable the cross-effect
+'Kafka.Effectful.Producer.Transaction.commitOffsetMessageTransaction'
+helper, which must reach both the producer and consumer handles to
+call the underlying transactional offset-commit primitive. New
+operations should go through the 'KafkaConsumer' effect rather than
+this handle.
+
+@since 0.2.0.0
+-}
+askConsumerHandle :: (KafkaConsumer :> es) => Eff es KC.KafkaConsumer
+askConsumerHandle = send AskConsumerHandle

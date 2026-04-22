@@ -8,14 +8,27 @@ module Kafka.Effectful.Producer.Effect (
     produceMessageSync,
     produceMessageBatch,
     flushProducer,
+
+    -- * Transactions
+    initTransactions,
+    beginTransaction,
+    commitTransaction,
+    abortTransaction,
+
+    -- ** Internal — cross-effect plumbing
+    sendOffsetsToTransaction,
+    askProducerHandle,
 )
 where
 
 import Effectful (Dispatch (..), DispatchOf, Eff, Effect, (:>))
 import Effectful.Dispatch.Dynamic (send)
-import Kafka.Consumer.Types (Offset)
+import Kafka.Consumer.Types (ConsumerRecord, Offset)
+import Kafka.Consumer.Types qualified as KC
 import Kafka.Producer.Types (DeliveryReport, ProducerRecord)
-import Kafka.Types (KafkaError)
+import Kafka.Producer.Types qualified as KP
+import Kafka.Transaction (TxError)
+import Kafka.Types (KafkaError, Timeout)
 
 -- | Effect for Kafka producer operations.
 data KafkaProducer :: Effect where
@@ -34,6 +47,24 @@ data KafkaProducer :: Effect where
         KafkaProducer m [(ProducerRecord, KafkaError)]
     FlushProducer ::
         KafkaProducer m ()
+    InitTransactions ::
+        Timeout ->
+        KafkaProducer m ()
+    BeginTransaction ::
+        KafkaProducer m ()
+    CommitTransaction ::
+        Timeout ->
+        KafkaProducer m (Maybe TxError)
+    AbortTransaction ::
+        Timeout ->
+        KafkaProducer m ()
+    SendOffsetsToTransaction ::
+        KC.KafkaConsumer ->
+        ConsumerRecord k v ->
+        Timeout ->
+        KafkaProducer m (Maybe TxError)
+    AskProducerHandle ::
+        KafkaProducer m KP.KafkaProducer
 
 type instance DispatchOf KafkaProducer = 'Dynamic
 
@@ -102,3 +133,85 @@ produceMessageBatch = send . ProduceMessageBatch
 -- | Flush the producer's outbound queue, blocking until all messages are sent.
 flushProducer :: (KafkaProducer :> es) => Eff es ()
 flushProducer = send FlushProducer
+
+{- | Initialise the transactional producer.
+
+Must be called exactly once per producer, after 'runKafkaProducer'
+has acquired the handle and before any call to 'beginTransaction'.
+The producer's 'ProducerProperties' must set @transactional.id@,
+@enable.idempotence=true@, and @acks=all@.
+
+Throws 'KafkaError' via the 'Error' effect on failure.
+
+@since 0.2.0.0
+-}
+initTransactions :: (KafkaProducer :> es) => Timeout -> Eff es ()
+initTransactions = send . InitTransactions
+
+{- | Open a new transaction.
+
+Must be preceded by exactly one successful 'initTransactions' on the
+same producer handle. Throws 'KafkaError' via the 'Error' effect on
+failure.
+
+@since 0.2.0.0
+-}
+beginTransaction :: (KafkaProducer :> es) => Eff es ()
+beginTransaction = send BeginTransaction
+
+{- | Commit the currently-open transaction.
+
+Returns @Nothing@ on success or @Just TxError@ on failure. The
+caller must branch on the three 'TxError' discriminators
+(@kafkaErrorTxnRequiresAbort@ first, then @kafkaErrorIsRetriable@,
+then @kafkaErrorIsFatal@) to decide whether to abort, retry, or
+crash.
+
+@since 0.2.0.0
+-}
+commitTransaction :: (KafkaProducer :> es) => Timeout -> Eff es (Maybe TxError)
+commitTransaction = send . CommitTransaction
+
+{- | Abort the currently-open transaction.
+
+Throws 'KafkaError' via the 'Error' effect on failure.
+
+@since 0.2.0.0
+-}
+abortTransaction :: (KafkaProducer :> es) => Timeout -> Eff es ()
+abortTransaction = send . AbortTransaction
+
+{- | Send the consumer offsets for a single 'ConsumerRecord' to the
+open transaction.
+
+This is plumbing used by
+'Kafka.Effectful.Producer.Transaction.commitOffsetMessageTransaction'
+and is not intended to be called directly — end-users should use the
+helper, which picks up the consumer handle automatically via
+'askConsumerHandle'.
+
+@since 0.2.0.0
+-}
+sendOffsetsToTransaction ::
+    (KafkaProducer :> es) =>
+    KC.KafkaConsumer ->
+    ConsumerRecord k v ->
+    Timeout ->
+    Eff es (Maybe TxError)
+sendOffsetsToTransaction consumer record timeout =
+    send (SendOffsetsToTransaction consumer record timeout)
+
+{- | Escape hatch: return the raw @Kafka.Producer.KafkaProducer@ handle
+acquired by 'runKafkaProducer'.
+
+Exposed to enable the cross-effect
+'Kafka.Effectful.Producer.Transaction.commitOffsetMessageTransaction'
+helper, which must reach both the producer and consumer handles to
+call the underlying transactional offset-commit primitive. New
+operations should go through the 'KafkaProducer' effect rather than
+this handle.
+
+@since 0.2.0.0
+-}
+askProducerHandle :: (KafkaProducer :> es) => Eff es KP.KafkaProducer
+askProducerHandle = send AskProducerHandle

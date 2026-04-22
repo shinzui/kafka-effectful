@@ -80,8 +80,9 @@ branching for each of the three error classes.
 
 - [x] Milestone 1: sync and per-message-callback publish. (2026-04-22)
 - [x] Milestone 2: batch publish via `produceMessageBatch`. (2026-04-22)
-- [ ] Milestone 3: transaction API exposed via producer effect plus a
+- [x] Milestone 3: transaction API exposed via producer effect plus a
       cross-effect helper for `commitOffsetMessageTransaction`.
+      (2026-04-22)
 - [ ] Milestone 4: facade updates, Haddocks, and README scenario walk-through.
 - [ ] Milestone 5: example programs under the `examples` cabal flag.
 - [ ] Milestone 6: full-repo validation — `cabal build`, `cabal sdist`, and

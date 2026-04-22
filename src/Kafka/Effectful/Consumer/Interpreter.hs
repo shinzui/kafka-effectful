@@ -87,6 +87,7 @@ handleConsumer consumer _env = \case
     Position parts -> throwOnLeft $ K.position consumer parts
     Assignment -> throwOnLeft $ K.assignment consumer
     Subscription -> throwOnLeft $ K.subscription consumer
+    AskConsumerHandle -> pure consumer
   where
     throwOnJust action' = do
         mbErr <- Effectful.liftIO action'

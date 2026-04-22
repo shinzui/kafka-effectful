@@ -38,6 +38,7 @@ library
     Kafka.Effectful.Producer
     Kafka.Effectful.Producer.Effect
     Kafka.Effectful.Producer.Interpreter
+    Kafka.Effectful.Producer.Transaction
 
   build-depends:
     , base             >=4.21 && <5

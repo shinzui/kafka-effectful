@@ -20,6 +20,7 @@ import Effectful.Exception qualified as Exception
 import Kafka.Effectful.Producer.Effect (KafkaProducer (..))
 import Kafka.Producer qualified as K
 import Kafka.Producer.ProducerProperties (ProducerProperties)
+import Kafka.Transaction qualified as K
 import Kafka.Types (KafkaError)
 
 {- | Run the 'KafkaProducer' effect.
@@ -80,3 +81,20 @@ handleProducer producer _env = \case
                     K.NoMessageError err -> throwError err
     FlushProducer ->
         Effectful.liftIO $ K.flushProducer producer
+    InitTransactions timeout ->
+        throwOnJust $ K.initTransactions producer timeout
+    BeginTransaction ->
+        throwOnJust $ K.beginTransaction producer
+    CommitTransaction timeout ->
+        Effectful.liftIO $ K.commitTransaction producer timeout
+    AbortTransaction timeout ->
+        throwOnJust $ K.abortTransaction producer timeout
+    SendOffsetsToTransaction consumer record timeout ->
+        Effectful.liftIO $
+            K.commitOffsetMessageTransaction producer consumer record timeout
+    AskProducerHandle ->
+        pure producer
+  where
+    throwOnJust action' = do
+        mbErr <- Effectful.liftIO action'
+        for_ mbErr throwError

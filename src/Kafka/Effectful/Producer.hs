@@ -12,6 +12,21 @@ module Kafka.Effectful.Producer (
     produceMessageBatch,
     flushProducer,
 
+    -- * Transactions
+    initTransactions,
+    beginTransaction,
+    commitTransaction,
+    abortTransaction,
+    commitOffsetMessageTransaction,
+    TxError,
+    getKafkaError,
+    kafkaErrorIsFatal,
+    kafkaErrorIsRetriable,
+    kafkaErrorTxnRequiresAbort,
+
+    -- * Raw handle escape hatch
+    askProducerHandle,
+
     -- * Types
     ProducerRecord (..),
     ProducePartition (..),
@@ -55,11 +70,31 @@ module Kafka.Effectful.Producer (
 )
 where
 
-import Kafka.Effectful.Producer.Effect (KafkaProducer, flushProducer, produceMessage, produceMessage', produceMessageBatch, produceMessageSync)
+import Kafka.Effectful.Producer.Effect (
+    KafkaProducer,
+    abortTransaction,
+    askProducerHandle,
+    beginTransaction,
+    commitTransaction,
+    flushProducer,
+    initTransactions,
+    produceMessage,
+    produceMessage',
+    produceMessageBatch,
+    produceMessageSync,
+ )
 import Kafka.Effectful.Producer.Interpreter (runKafkaProducer)
+import Kafka.Effectful.Producer.Transaction (commitOffsetMessageTransaction)
 import Kafka.Producer.ProducerProperties (ProducerProperties (..))
 import Kafka.Producer.ProducerProperties qualified as K
 import Kafka.Producer.Types (DeliveryReport (..), ImmediateError (..), ProducePartition (..), ProducerRecord (..))
+import Kafka.Transaction (
+    TxError,
+    getKafkaError,
+    kafkaErrorIsFatal,
+    kafkaErrorIsRetriable,
+    kafkaErrorTxnRequiresAbort,
+ )
 import Kafka.Types (BrokerAddress (..), Headers, KafkaCompressionCodec (..), KafkaDebug (..), KafkaError (..), KafkaLogLevel (..), Timeout (..), TopicName (..), headersFromList, headersToList)
 
 -- Offset is in Consumer.Types
