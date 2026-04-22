@@ -27,6 +27,158 @@ example =
     flushProducer
 ```
 
+### Producer scenarios
+
+The eight scenarios below mirror the
+[producer-best-practices](https://github.com/haskell-works/hw-kafka-client/blob/master/docs/producer-best-practices.md)
+guide from `hw-kafka-client`. Each snippet uses only symbols exported
+from `Kafka.Effectful`; when a snippet needs `produceMessage'` or
+`askProducerHandle`, it also imports `Kafka.Effectful.Producer`.
+
+##### Scenario 1 — Fire-and-forget
+
+Register a global delivery callback via `ProducerProperties` and
+enqueue without blocking. `runKafkaProducer` flushes on scope exit.
+
+```haskell
+fireAndForgetProps =
+  brokersList ["localhost:9092"]
+  <> setCallback (deliveryCallback logFailure)
+
+runKafkaProducer fireAndForgetProps $
+  forM_ events (produceMessage . toRecord)
+```
+
+##### Scenario 2 — Synchronous delivery confirmation
+
+`produceMessageSync` allocates an `MVar`, flushes the producer, and
+returns the broker-assigned `Offset` — throwing `KafkaError` on any
+failure.
+
+```haskell
+runKafkaProducer producerProps $ do
+  offset <- produceMessageSync record
+  liftIO $ putStrLn ("stored at offset " <> show offset)
+```
+
+##### Scenario 3 — Idempotent producer
+
+Configuration only — no new call site is needed. Safe to enable by
+default; the broker deduplicates retries by `(producer-id, sequence)`.
+
+```haskell
+idempotentProps =
+  brokersList ["localhost:9092"]
+  <> extraProp "enable.idempotence" "true"
+  <> extraProp "acks" "all"
+  <> extraProp "max.in.flight.requests.per.connection" "5"
+```
+
+##### Scenario 4 — High-throughput batching
+
+Combine `produceMessageBatch` with `linger.ms`, `batch.size`, and
+`compression` to trade a few milliseconds of latency for substantially
+higher throughput. The result contains only records that failed to
+enqueue.
+
+```haskell
+batchProps =
+  brokersList ["localhost:9092"]
+  <> compression Snappy
+  <> extraProp "linger.ms" "10"
+  <> extraProp "batch.size" "65536"
+
+runKafkaProducer batchProps $ do
+  failures <- produceMessageBatch records
+  unless (null failures) $
+    liftIO $ putStrLn ("enqueue failures: " <> show (length failures))
+```
+
+##### Scenario 5 — Transactional ETL
+
+Consume, transform, produce, and commit consumer offsets — all inside
+one producer transaction. `commitOffsetMessageTransaction` requires
+both the `KafkaProducer` and `KafkaConsumer` effects. `TxError` must
+be dispatched on in a fixed order: `kafkaErrorTxnRequiresAbort`,
+`kafkaErrorIsRetriable`, `kafkaErrorIsFatal`.
+
+```haskell
+txProps =
+  brokersList ["localhost:9092"]
+  <> extraProp "transactional.id" "etl-1"
+  <> extraProp "enable.idempotence" "true"
+  <> extraProp "acks" "all"
+
+etl = runKafkaProducer txProps $ runKafkaConsumer consumerProps sub $ do
+  initTransactions (Timeout 10000)
+  forever $ do
+    msgs <- pollMessageBatch (Timeout 500) (BatchSize 100)
+    let records = rights msgs
+    unless (null records) $ do
+      beginTransaction
+      forM_ records (produceMessage . transform)
+      forM_ (lastPerPartition records) $ \r ->
+        commitOffsetMessageTransaction r (Timeout 5000)
+          >>= handleTxResult
+      commitTransaction (Timeout 5000) >>= handleTxResult
+
+handleTxResult Nothing  = pure ()
+handleTxResult (Just e)
+  | kafkaErrorTxnRequiresAbort e = abortTransaction (Timeout 5000)
+  | kafkaErrorIsRetriable e      = liftIO $ putStrLn "retry"
+  | kafkaErrorIsFatal e          = throwError (getKafkaError e)
+  | otherwise                    = liftIO $ putStrLn (show (getKafkaError e))
+```
+
+##### Scenario 6 — Keyed partitioning for ordering
+
+Set `prKey` and leave `prPartition = UnassignedPartition` so the
+default hash partitioner routes every record for the same key to the
+same partition. Enable idempotence alongside, so a retry does not
+reorder.
+
+```haskell
+orderedByKey userId event = ProducerRecord
+  { prTopic     = TopicName "user-events"
+  , prPartition = UnassignedPartition
+  , prKey       = Just userId
+  , prValue     = Just (encode event)
+  , prHeaders   = mempty
+  }
+```
+
+##### Scenario 7 — Custom partitioning and headers
+
+Target a specific partition with `SpecifiedPartition` and attach
+per-message metadata via `headersFromList`.
+
+```haskell
+shardedRecord (Shard n) payload = ProducerRecord
+  { prTopic     = TopicName "sharded-events"
+  , prPartition = SpecifiedPartition n
+  , prKey       = Nothing
+  , prValue     = Just payload
+  , prHeaders   = headersFromList
+      [ ("schema-version", "v3")
+      , ("source",         "billing-api")
+      ]
+  }
+```
+
+##### Scenario 8 — Graceful shutdown
+
+`runKafkaProducer` already brackets the handle — it flushes and closes
+the producer on normal scope exit, so enqueued records drain before
+the program continues. No explicit cleanup code is needed.
+
+```haskell
+main =
+  runEff . runError @KafkaError $
+    runKafkaProducer props $ do
+      forM_ events (produceMessage . toRecord)
+      -- no explicit flush needed; runKafkaProducer flushes on exit
+```
+
 ### Consumer
 
 ```haskell

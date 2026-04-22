@@ -83,7 +83,8 @@ branching for each of the three error classes.
 - [x] Milestone 3: transaction API exposed via producer effect plus a
       cross-effect helper for `commitOffsetMessageTransaction`.
       (2026-04-22)
-- [ ] Milestone 4: facade updates, Haddocks, and README scenario walk-through.
+- [x] Milestone 4: facade updates, Haddocks, and README scenario walk-through.
+      (2026-04-22)
 - [ ] Milestone 5: example programs under the `examples` cabal flag.
 - [ ] Milestone 6: full-repo validation — `cabal build`, `cabal sdist`, and
       example programs compile.

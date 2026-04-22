@@ -77,7 +77,7 @@ produceMessage = send . ProduceMessage
 {- | Send a single message with a per-message 'DeliveryReport' callback.
 
 The callback runs on a librdkafka-forked thread, so blocking operations
-(such as writing to an 'MVar') are safe. Throws 'KafkaError' via the
+(such as writing to an @MVar@) are safe. Throws 'KafkaError' via the
 'Error' effect when the underlying send fails to enqueue
 (@ImmediateError@).
 
@@ -119,7 +119,7 @@ error librdkafka reported for that record. Successful records are
 omitted. This mirrors @Kafka.Producer.produceMessageBatch@.
 
 Combined with @linger.ms@ and @batch.size@ set on the
-'ProducerProperties', this is the throughput-oriented path — Scenario
+@ProducerProperties@, this is the throughput-oriented path — Scenario
 4 of @hw-kafka-client@'s producer best practices.
 
 @since 0.2.0.0
@@ -136,9 +136,9 @@ flushProducer = send FlushProducer
 
 {- | Initialise the transactional producer.
 
-Must be called exactly once per producer, after 'runKafkaProducer'
+Must be called exactly once per producer, after @runKafkaProducer@
 has acquired the handle and before any call to 'beginTransaction'.
-The producer's 'ProducerProperties' must set @transactional.id@,
+The producer's @ProducerProperties@ must set @transactional.id@,
 @enable.idempotence=true@, and @acks=all@.
 
 Throws 'KafkaError' via the 'Error' effect on failure.
@@ -188,7 +188,7 @@ This is plumbing used by
 'Kafka.Effectful.Producer.Transaction.commitOffsetMessageTransaction'
 and is not intended to be called directly — end-users should use the
 helper, which picks up the consumer handle automatically via
-'askConsumerHandle'.
+@askConsumerHandle@.
 
 @since 0.2.0.0
 -}
@@ -202,7 +202,7 @@ sendOffsetsToTransaction consumer record timeout =
     send (SendOffsetsToTransaction consumer record timeout)
 
 {- | Escape hatch: return the raw @Kafka.Producer.KafkaProducer@ handle
-acquired by 'runKafkaProducer'.
+acquired by @runKafkaProducer@.
 
 Exposed to enable the cross-effect
 'Kafka.Effectful.Producer.Transaction.commitOffsetMessageTransaction'

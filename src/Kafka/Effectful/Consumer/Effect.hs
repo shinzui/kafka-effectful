@@ -194,7 +194,7 @@ subscription :: (KafkaConsumer :> es) => Eff es [(TopicName, SubscribedPartition
 subscription = send Subscription
 
 {- | Escape hatch: return the raw @Kafka.Consumer.KafkaConsumer@ handle
-acquired by 'runKafkaConsumer'.
+acquired by @runKafkaConsumer@.
 
 Exposed to enable the cross-effect
 'Kafka.Effectful.Producer.Transaction.commitOffsetMessageTransaction'

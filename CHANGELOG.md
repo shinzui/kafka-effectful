@@ -4,6 +4,37 @@ All notable changes to `kafka-effectful` are documented here.
 
 This package follows the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
+## Unreleased
+
+- Add `produceMessage'` and `produceMessageSync` to the
+  `KafkaProducer` effect. `produceMessage'` mirrors
+  `Kafka.Producer.produceMessage'`, taking a per-message
+  `DeliveryReport -> IO ()` callback. `produceMessageSync` blocks
+  until the broker acknowledges the record and returns the assigned
+  `Offset`. Both throw `KafkaError` via the `Error` effect on
+  failure.
+- Add `produceMessageBatch` to the `KafkaProducer` effect. Returns
+  only the records that failed to enqueue, paired with their
+  `KafkaError`. The interpreter inlines the upstream definition
+  (`mapM` over the list) because Hackage `hw-kafka-client-5.3.0`
+  does not re-export `Kafka.Producer.produceMessageBatch`.
+- Add the transaction API to the `KafkaProducer` effect —
+  `initTransactions`, `beginTransaction`, `commitTransaction`,
+  `abortTransaction` — plus the cross-effect helper
+  `commitOffsetMessageTransaction` (in new module
+  `Kafka.Effectful.Producer.Transaction`) that commits consumer
+  offsets as part of the producer's open transaction. Re-exports
+  `TxError` with its three accessors
+  (`kafkaErrorTxnRequiresAbort`, `kafkaErrorIsRetriable`,
+  `kafkaErrorIsFatal`).
+- Add narrow handle-ask escape hatches `askProducerHandle` and
+  `askConsumerHandle` on the scoped facades. Reachable only from
+  `Kafka.Effectful.Producer` and `Kafka.Effectful.Consumer`; not
+  re-exported from the combined `Kafka.Effectful` facade.
+- Expand the README with a "Producer scenarios" walkthrough covering
+  all eight best-practice cases from upstream's
+  `producer-best-practices.md`.
+
 ## 0.1.0.0 — 2026-04-16
 
 Initial release.
