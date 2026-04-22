@@ -85,7 +85,8 @@ branching for each of the three error classes.
       (2026-04-22)
 - [x] Milestone 4: facade updates, Haddocks, and README scenario walk-through.
       (2026-04-22)
-- [ ] Milestone 5: example programs under the `examples` cabal flag.
+- [x] Milestone 5: example programs under the `examples` cabal flag.
+      (2026-04-22)
 - [ ] Milestone 6: full-repo validation — `cabal build`, `cabal sdist`, and
       example programs compile.
 

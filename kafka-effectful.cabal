@@ -21,6 +21,11 @@ source-repository head
   type:     git
   location: https://github.com/shinzui/kafka-effectful.git
 
+flag examples
+  description: Build example executables
+  manual:      True
+  default:     False
+
 common warnings
   ghc-options:
     -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
@@ -62,3 +67,46 @@ library
     OverloadedStrings
     TypeFamilies
     TypeOperators
+
+executable example-sync-publish
+  import:             warnings
+  main-is:            SyncPublish.hs
+  hs-source-dirs:     examples
+  default-language:   GHC2024
+  default-extensions:
+    ImportQualifiedPost
+    LambdaCase
+    OverloadedStrings
+    TypeApplications
+
+  if !flag(examples)
+    buildable: False
+
+  build-depends:
+    , base             >=4.21 && <5
+    , bytestring       >=0.11 && <0.13
+    , effectful-core   >=2.5  && <2.7
+    , hw-kafka-client  >=5.3  && <6
+    , kafka-effectful
+
+executable example-transactional-etl
+  import:             warnings
+  main-is:            TransactionalEtl.hs
+  hs-source-dirs:     examples
+  default-language:   GHC2024
+  default-extensions:
+    ImportQualifiedPost
+    LambdaCase
+    OverloadedStrings
+    TypeApplications
+
+  if !flag(examples)
+    buildable: False
+
+  build-depends:
+    , base             >=4.21 && <5
+    , bytestring       >=0.11 && <0.13
+    , containers       >=0.6  && <0.8
+    , effectful-core   >=2.5  && <2.7
+    , hw-kafka-client  >=5.3  && <6
+    , kafka-effectful
