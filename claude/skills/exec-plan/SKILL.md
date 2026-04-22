@@ -222,7 +222,7 @@ When creating a new plan, use this structure. Every section is mandatory.
         In src/Seihou/Core/Template.hs, define:
 
             renderTemplate :: TemplatePath -> Variables -> IO Text
-# --- seihou:exec-plan ---
+# --- seihou:exec-plan#bfa0a336 ---
 
 
 ## Intention Tracking
@@ -260,4 +260,4 @@ When both an ExecPlan and an Intention are active, commits must include both tra
     Intention: INTENT-42
 
 Ask once at the start of a session. Do not ask again on subsequent commits within the same session. If the user skips or declines, proceed without the trailer.
-# --- /seihou:exec-plan ---
+# --- /seihou:exec-plan#bfa0a336 ---
