@@ -175,6 +175,32 @@ forcing every existing user to learn a new operation surface.
   -threaded` to the `kafka-effectful-test` cabal stanza. The
   example executable will need the same.
 
+- 2026-05-06 (Milestone 8 verification): The first end-to-end run
+  against Redpanda + Jaeger v2 reproduced the consumer-side polling
+  silently returning `Nothing` for 30 seconds despite a record being
+  on the wire. Root cause: the example set
+  `auto.offset.reset=earliest` via `extraProp` on the
+  `ConsumerProperties`, but in `hw-kafka-client` that key belongs to
+  the `Subscription`, not the consumer config — the property is
+  topic-level in librdkafka. Fix: replace
+  `KEC.extraProp "auto.offset.reset" "earliest"` with
+  `topics [TopicName ...] <> offsetReset Earliest` on the
+  Subscription. After the fix, producer and consumer trace IDs
+  match and the trace appears in Jaeger as expected.
+
+- 2026-05-06 (Milestone 8 verification): End-to-end Jaeger trace
+  confirmed. With Jaeger v2 receiving OTLP at `localhost:4318` and
+  Redpanda exposing Kafka at `localhost:9092`, a full run produces
+  one trace ID `5c564efc13a75d2fe924c4f0fe6ac8bb` with three spans:
+  the outer `publish` (Internal), then `send otel-demo` (Producer
+  kind, parent=publish), then `process otel-demo` (Consumer kind,
+  parent=`send otel-demo`). The consumer-side parent pointer is
+  the proof that the W3C `traceparent` header crossed the broker.
+  All `messaging.*` attributes (system, destination.name,
+  operation, kafka.destination.partition, kafka.message.offset,
+  kafka.message.key, kafka.consumer.group) appear on the spans
+  with the correct types.
+
 
 ## Decision Log
 
@@ -285,10 +311,11 @@ What remains:
   did not synthesize that attribute — `shibuya-kafka-adapter` does,
   via its `mkMessageId` helper. A future plan could extend
   `consumerRecordAttributes` to emit it for consumer spans.
-- The `example-otel-tracing` end-to-end run against a live broker
-  is documented but has not been executed in CI. Validating the
-  trace-ID match on a real Kafka installation is a manual user
-  step.
+- End-to-end run against a live broker is now verified manually
+  (Redpanda 26.1 in Colima + Jaeger v2.15 on localhost), but is
+  not yet wired into CI. Adding a CI job that runs Redpanda in a
+  service container and asserts the example exits zero is a
+  natural follow-up.
 
 Lessons learned:
 

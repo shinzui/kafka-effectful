@@ -106,7 +106,6 @@ consumerProps :: Text -> ConsumerProperties
 consumerProps host =
     KEC.brokersList [BrokerAddress host]
         <> KEC.groupId (ConsumerGroupId "kafka-effectful-otel-demo")
-        <> KEC.extraProp "auto.offset.reset" "earliest"
 
 mkRecord :: Text -> ProducerRecord
 mkRecord t =
@@ -192,7 +191,7 @@ main = do
             runKafkaConsumerTraced
                 tracer
                 (consumerProps args.bootstrapServers)
-                (topics [TopicName args.topic])
+                (topics [TopicName args.topic] <> offsetReset Earliest)
                 (pollUntilRecord consumerTraceRef)
     case consumerResult of
         Left (_cs, err) -> do
@@ -216,6 +215,9 @@ main = do
                 else do
                     putStrLn "[otel-tracing] trace IDs differ"
                     exitFailure
-        _ -> do
-            hPutStrLn stderr "[otel-tracing] failed to capture both trace ids"
+        (Nothing, _) -> do
+            hPutStrLn stderr "[otel-tracing] failed to capture producer trace id"
+            exitFailure
+        (_, Nothing) -> do
+            hPutStrLn stderr "[otel-tracing] consumer never received the record (timed out)"
             exitFailure
