@@ -119,11 +119,11 @@ forcing every existing user to learn a new operation surface.
       builds with the new `hs-opentelemetry-api` and
       `hs-opentelemetry-semantic-conventions` build-depends but does not
       yet expose any tracing behavior. (Done 2026-05-06.)
-- [ ] Milestone 2: Implement `Kafka.Effectful.OpenTelemetry.Semantic`
-      (pure attribute helpers).
-- [ ] Milestone 3: Implement `Kafka.Effectful.OpenTelemetry.Propagation`
+- [x] Milestone 2: Implement `Kafka.Effectful.OpenTelemetry.Semantic`
+      (pure attribute helpers). (Done 2026-05-06.)
+- [x] Milestone 3: Implement `Kafka.Effectful.OpenTelemetry.Propagation`
       (header bridges between `hw-kafka-client.Headers` and
-      `Network.HTTP.Types.RequestHeaders`).
+      `Network.HTTP.Types.RequestHeaders`). (Done 2026-05-06.)
 - [ ] Milestone 4: Implement `runKafkaProducerTraced` in
       `Kafka.Effectful.OpenTelemetry.Producer.Interpreter`.
 - [ ] Milestone 5: Implement `runKafkaConsumerTraced` in
