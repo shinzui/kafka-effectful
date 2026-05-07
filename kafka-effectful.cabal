@@ -126,10 +126,18 @@ executable example-otel-tracing
   import:             warnings
   main-is:            OtelTracing.hs
   hs-source-dirs:     examples
+
+  -- The hs-opentelemetry batch span processor requires the threaded
+  -- runtime; without it, initializeGlobalTracerProvider raises at
+  -- runtime.
+  ghc-options:        -threaded
   default-language:   GHC2024
   default-extensions:
+    DuplicateRecordFields
     ImportQualifiedPost
     LambdaCase
+    NoFieldSelectors
+    OverloadedRecordDot
     OverloadedStrings
     TypeApplications
 

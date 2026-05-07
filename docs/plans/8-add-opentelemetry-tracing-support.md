@@ -137,8 +137,10 @@ forcing every existing user to learn a new operation surface.
       attribute correctness, propagation round-trip, and shibuya
       compatibility (matching attribute keys and value types). All 23
       tests pass. (Done 2026-05-06.)
-- [ ] Milestone 8: Add the `example-otel-tracing` executable behind the
-      existing `examples` flag, gated on a reachable broker.
+- [x] Milestone 8: Add the `example-otel-tracing` executable behind the
+      existing `examples` flag, gated on a reachable broker. (Done
+      2026-05-06; builds cleanly under `-f examples`. End-to-end run
+      against a live broker is the user-facing acceptance step.)
 - [ ] Milestone 9: Update `README.md` and `CHANGELOG.md`. Bump the version
       to `0.2.0.0` (additive minor change post-0.1).
 - [ ] Milestone 10: Outcomes & Retrospective.
