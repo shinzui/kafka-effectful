@@ -124,12 +124,15 @@ forcing every existing user to learn a new operation surface.
 - [x] Milestone 3: Implement `Kafka.Effectful.OpenTelemetry.Propagation`
       (header bridges between `hw-kafka-client.Headers` and
       `Network.HTTP.Types.RequestHeaders`). (Done 2026-05-06.)
-- [ ] Milestone 4: Implement `runKafkaProducerTraced` in
-      `Kafka.Effectful.OpenTelemetry.Producer.Interpreter`.
-- [ ] Milestone 5: Implement `runKafkaConsumerTraced` in
-      `Kafka.Effectful.OpenTelemetry.Consumer.Interpreter`.
-- [ ] Milestone 6: Add `Kafka.Effectful.OpenTelemetry` facade and wire all
+- [x] Milestone 4: Implement `runKafkaProducerTraced` in
+      `Kafka.Effectful.OpenTelemetry.Producer.Interpreter`. (Done
+      2026-05-06.)
+- [x] Milestone 5: Implement `runKafkaConsumerTraced` in
+      `Kafka.Effectful.OpenTelemetry.Consumer.Interpreter`. (Done
+      2026-05-06.)
+- [x] Milestone 6: Add `Kafka.Effectful.OpenTelemetry` facade and wire all
       five modules into `kafka-effectful.cabal`'s `exposed-modules`.
+      (Done 2026-05-06.)
 - [ ] Milestone 7: Add the `kafka-effectful-test` test-suite that proves
       attribute correctness, propagation round-trip, and shibuya
       compatibility (matching attribute keys and value types).
