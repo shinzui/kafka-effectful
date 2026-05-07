@@ -152,6 +152,12 @@ test-suite kafka-effectful-test
   type:               exitcode-stdio-1.0
   main-is:            Main.hs
   hs-source-dirs:     test
+
+  -- The hs-opentelemetry batch span processor requires the threaded
+  -- runtime. Without -threaded, even initializing the global tracer
+  -- provider in PropagationTest's withResource block raises an
+  -- exception at runtime.
+  ghc-options:        -threaded
   default-language:   GHC2024
   default-extensions:
     DataKinds

@@ -133,9 +133,10 @@ forcing every existing user to learn a new operation surface.
 - [x] Milestone 6: Add `Kafka.Effectful.OpenTelemetry` facade and wire all
       five modules into `kafka-effectful.cabal`'s `exposed-modules`.
       (Done 2026-05-06.)
-- [ ] Milestone 7: Add the `kafka-effectful-test` test-suite that proves
+- [x] Milestone 7: Add the `kafka-effectful-test` test-suite that proves
       attribute correctness, propagation round-trip, and shibuya
-      compatibility (matching attribute keys and value types).
+      compatibility (matching attribute keys and value types). All 23
+      tests pass. (Done 2026-05-06.)
 - [ ] Milestone 8: Add the `example-otel-tracing` executable behind the
       existing `examples` flag, gated on a reachable broker.
 - [ ] Milestone 9: Update `README.md` and `CHANGELOG.md`. Bump the version
@@ -160,6 +161,15 @@ forcing every existing user to learn a new operation surface.
   to inspect / construct that hashmap from outside the OTel package
   (e.g. in tests that compare against
   `shibuya-kafka-adapter`\'s `HashMap`-typed `kafkaSpanAttributes`).
+
+- 2026-05-06 (Milestone 7): The `hs-opentelemetry-sdk` batch span
+  processor requires GHC's threaded runtime — `cabal test` without
+  `-threaded` raises `"The hs-opentelemetry batch processor does not
+  work without the -threaded GHC flag!"` even when no spans are
+  emitted, because `initializeGlobalTracerProvider` calls
+  `batchProcessor` during construction. Added `ghc-options:
+  -threaded` to the `kafka-effectful-test` cabal stanza. The
+  example executable will need the same.
 
 
 ## Decision Log
