@@ -4,7 +4,9 @@ All notable changes to `kafka-effectful` are documented here.
 
 This package follows the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
-## Unreleased
+## 0.2.0.0 — 2026-05-06
+
+Additive release. No breaking changes to existing modules.
 
 - Add `produceMessage'` and `produceMessageSync` to the
   `KafkaProducer` effect. `produceMessage'` mirrors
@@ -31,9 +33,6 @@ This package follows the [Haskell Package Versioning Policy](https://pvp.haskell
   `askConsumerHandle` on the scoped facades. Reachable only from
   `Kafka.Effectful.Producer` and `Kafka.Effectful.Consumer`; not
   re-exported from the combined `Kafka.Effectful` facade.
-- Expand the README with a "Producer scenarios" walkthrough covering
-  all eight best-practice cases from upstream's
-  `producer-best-practices.md`.
 - Add OpenTelemetry tracing support via opt-in interpreter variants
   `runKafkaProducerTraced` and `runKafkaConsumerTraced`. New modules
   under `Kafka.Effectful.OpenTelemetry.*` provide the
@@ -45,9 +44,15 @@ This package follows the [Haskell Package Versioning Policy](https://pvp.haskell
   zero-cost for users who do not want tracing. The attribute keys
   and value types match what `shibuya-kafka-adapter` already emits,
   so layering the two remains compatible.
-- Bump version to 0.2.0.0 (additive minor change post-0.1: new
-  modules and dependencies, no breaking changes to existing
-  modules).
+- Add `kafka-effectful-test` test suite covering the OpenTelemetry
+  attribute helpers and trace-context propagation bridges.
+- Add example projects: `example-sync-publish`,
+  `example-transactional-etl`, and `example-otel-tracing`
+  demonstrating an end-to-end traced producer/consumer pipeline.
+- Expand the README with a "Producer scenarios" walkthrough covering
+  all eight best-practice cases from upstream's
+  `producer-best-practices.md`, and document the new tracing
+  support.
 
 ## 0.1.0.0 — 2026-04-16
 
