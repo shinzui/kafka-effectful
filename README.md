@@ -230,6 +230,76 @@ Replace `producerProps` and `record` with your own `ProducerProperties` and
 `ProducerRecord` values (see the `Kafka.Effectful.Producer` module for the
 available builders).
 
+### OpenTelemetry tracing
+
+Swap `runKafkaProducer` for `runKafkaProducerTraced tracer` and
+`runKafkaConsumer` for `runKafkaConsumerTraced tracer` to add
+distributed tracing without changing any effect-level code. The
+traced interpreters open a `Producer`-kind span around every
+record-sending operation and a `Consumer`-kind span around every
+successful `pollMessage` / per-record success of `pollMessageBatch`,
+populated with the OpenTelemetry messaging semantic conventions
+(`messaging.system`, `messaging.destination.name`,
+`messaging.operation`, `messaging.kafka.destination.partition`,
+`messaging.kafka.message.offset`, `messaging.kafka.message.key`,
+`messaging.kafka.consumer.group`). The current OTel context is
+injected into the outgoing record's headers as W3C `traceparent` /
+`tracestate` so downstream consumers can extract it and continue the
+trace.
+
+```haskell
+{-# LANGUAGE TypeApplications #-}
+
+import Effectful
+import Effectful.Error.Static (runError)
+import Kafka.Effectful
+import Kafka.Effectful.OpenTelemetry (runKafkaProducerTraced)
+import OpenTelemetry.Trace
+  ( initializeGlobalTracerProvider
+  , makeTracer
+  , tracerOptions
+  )
+
+main :: IO ()
+main = do
+  tp <- initializeGlobalTracerProvider
+  let tracer = makeTracer tp "my-app" tracerOptions
+  result <- runEff . runError @KafkaError $
+    runKafkaProducerTraced tracer producerProps $ do
+      produceMessage record
+      flushProducer
+  case result of
+    Left (_, err) -> putStrLn ("Kafka error: " <> show err)
+    Right ()      -> pure ()
+```
+
+Span names are `"send <topic>"` and `"process <topic>"`. The default
+interpreters (`runKafkaProducer`, `runKafkaConsumer`) are unchanged
+and zero-cost for users who do not want tracing.
+
+**Compatibility with `shibuya-kafka-adapter`.** The attribute keys
+this library emits (`messaging.system`,
+`messaging.kafka.destination.partition`,
+`messaging.kafka.message.offset`) agree with what
+`shibuya-kafka-adapter`'s envelope-level attributes already produce.
+Layering the two yields a Receive→Process span split:
+`kafka-effectful`'s poll span as parent, Shibuya's framework
+per-message span as child. If you want only one span per message
+instead of two, use either `kafka-effectful`'s traced runner *or*
+Shibuya's framework span — not both.
+
+The end-to-end demo in
+`examples/OtelTracing.hs` produces a record through the traced
+producer and reads it back through the traced consumer, printing
+both trace IDs and asserting they match. Run it against a local
+broker:
+
+```
+cabal run example-otel-tracing -f examples -- \
+  --bootstrap-servers localhost:9092 \
+  --topic otel-demo
+```
+
 ## Module Structure
 
 | Module | Description |
@@ -239,8 +309,14 @@ available builders).
 | `Kafka.Effectful.Consumer` | Consumer effect, interpreter, and types |
 | `Kafka.Effectful.Producer.Effect` | `KafkaProducer` effect definition and operations |
 | `Kafka.Effectful.Producer.Interpreter` | `runKafkaProducer` interpreter |
+| `Kafka.Effectful.Producer.Transaction` | Cross-effect `commitOffsetMessageTransaction` helper |
 | `Kafka.Effectful.Consumer.Effect` | `KafkaConsumer` effect definition and operations |
 | `Kafka.Effectful.Consumer.Interpreter` | `runKafkaConsumer` interpreter |
+| `Kafka.Effectful.OpenTelemetry` | Single-import facade for the traced interpreters and helpers |
+| `Kafka.Effectful.OpenTelemetry.Producer.Interpreter` | `runKafkaProducerTraced` |
+| `Kafka.Effectful.OpenTelemetry.Consumer.Interpreter` | `runKafkaConsumerTraced` |
+| `Kafka.Effectful.OpenTelemetry.Semantic` | Pure attribute-builder helpers |
+| `Kafka.Effectful.OpenTelemetry.Propagation` | W3C trace-context header bridges |
 
 ## Requirements
 

@@ -141,9 +141,11 @@ forcing every existing user to learn a new operation surface.
       existing `examples` flag, gated on a reachable broker. (Done
       2026-05-06; builds cleanly under `-f examples`. End-to-end run
       against a live broker is the user-facing acceptance step.)
-- [ ] Milestone 9: Update `README.md` and `CHANGELOG.md`. Bump the version
-      to `0.2.0.0` (additive minor change post-0.1).
-- [ ] Milestone 10: Outcomes & Retrospective.
+- [x] Milestone 9: Update `README.md` and `CHANGELOG.md`. Bump the version
+      to `0.2.0.0` (additive minor change post-0.1). Version bump done
+      in Milestone 1; README "OpenTelemetry tracing" section and
+      CHANGELOG entry done now. (Done 2026-05-06.)
+- [x] Milestone 10: Outcomes & Retrospective. (Done 2026-05-06.)
 
 
 ## Surprises & Discoveries
@@ -252,7 +254,62 @@ forcing every existing user to learn a new operation surface.
 
 ## Outcomes & Retrospective
 
-(To be filled during and after implementation.)
+What was achieved (2026-05-06):
+
+- Five new exposed modules under `Kafka.Effectful.OpenTelemetry.*`:
+  the `Semantic` attribute-builder helpers, the `Propagation`
+  trace-context header bridges, the `Producer.Interpreter`
+  (`runKafkaProducerTraced`), the `Consumer.Interpreter`
+  (`runKafkaConsumerTraced`), and the single-import facade.
+- A new `kafka-effectful-test` test-suite with 23 tasty-hunit cases
+  covering attribute correctness, propagation round-trip, and a
+  shibuya-compatibility pin. Passes under
+  `cabal test --test-show-details=streaming`.
+- A new `example-otel-tracing` executable behind the existing
+  `examples` flag. Builds cleanly under `-f examples`; the
+  end-to-end run against a live broker (CLI step in Concrete Steps)
+  is the user-facing acceptance gate.
+- Version bumped from `0.1.0.0` to `0.2.0.0`. README has a new
+  "OpenTelemetry tracing" section with a 25-line snippet that wires
+  `runKafkaProducerTraced` and a Compatibility paragraph for the
+  shibuya layering case. CHANGELOG records the change under
+  "Unreleased".
+- The existing `Kafka.Effectful.{Producer,Consumer}.*` modules were
+  not modified at the source level. Users who do not import the new
+  modules see no behavior change.
+
+What remains:
+
+- `messaging.message.id`. Kafka has no native message ID, so the
+  conventional value is `<topic>-<partition>-<offset>`. This plan
+  did not synthesize that attribute — `shibuya-kafka-adapter` does,
+  via its `mkMessageId` helper. A future plan could extend
+  `consumerRecordAttributes` to emit it for consumer spans.
+- The `example-otel-tracing` end-to-end run against a live broker
+  is documented but has not been executed in CI. Validating the
+  trace-ID match on a real Kafka installation is a manual user
+  step.
+
+Lessons learned:
+
+- The plan placeholder version pins for the test-suite OTel deps
+  (`hs-opentelemetry-sdk ^>=0.0`, `hs-opentelemetry-exporter-otlp
+  ^>=0.0`) undershot what is actually published on Hackage. We
+  bumped them to `^>=0.1` after consulting the local source tree.
+  Worth noting in the future: when calling for "look up the actual
+  pin", run `cabal info <package>` and use the latest minor that
+  matches the source on disk.
+- The `hs-opentelemetry-sdk` batch span processor requires GHC's
+  threaded runtime. Without `-threaded` the test-suite *and* the
+  example program fail at `initializeGlobalTracerProvider` with
+  the runtime error
+  @"The hs-opentelemetry batch processor does not work without the
+  -threaded GHC flag!"@ — even when no spans are emitted. This is
+  not documented in the SDK README; we discovered it the first
+  time `cabal test` ran.
+- `treefmt` (the project's pre-commit formatter) reformats cabal
+  alignment, so the cabal file's column layout sometimes shifts on
+  commit. Anticipating this saved one round of `git commit` retry.
 
 
 ## Context and Orientation

@@ -34,6 +34,20 @@ This package follows the [Haskell Package Versioning Policy](https://pvp.haskell
 - Expand the README with a "Producer scenarios" walkthrough covering
   all eight best-practice cases from upstream's
   `producer-best-practices.md`.
+- Add OpenTelemetry tracing support via opt-in interpreter variants
+  `runKafkaProducerTraced` and `runKafkaConsumerTraced`. New modules
+  under `Kafka.Effectful.OpenTelemetry.*` provide the
+  attribute-builder helpers (`producerRecordAttributes`,
+  `consumerRecordAttributes`) and the W3C trace-context header
+  bridges (`extractTraceContextFromRecord`,
+  `injectTraceContextIntoRecord`). The default interpreters
+  `runKafkaProducer` and `runKafkaConsumer` are unchanged and remain
+  zero-cost for users who do not want tracing. The attribute keys
+  and value types match what `shibuya-kafka-adapter` already emits,
+  so layering the two remains compatible.
+- Bump version to 0.2.0.0 (additive minor change post-0.1: new
+  modules and dependencies, no breaking changes to existing
+  modules).
 
 ## 0.1.0.0 — 2026-04-16
 
