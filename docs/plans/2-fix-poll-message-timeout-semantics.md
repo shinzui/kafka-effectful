@@ -1,7 +1,15 @@
-# Fix consumer polling timeout semantics
+---
+id: 2
+slug: fix-poll-message-timeout-semantics
+title: "Fix consumer polling timeout semantics"
+kind: exec-plan
+created_at: 2026-04-17T03:20:30Z
+intention: "intention_01km3c2s7xeamb7gkfjkve90ma"
+master_plan: "docs/masterplans/1-prepare-kafka-effectful-0-1-release.md"
+---
 
-MasterPlan: docs/masterplans/1-prepare-kafka-effectful-0-1-release.md
-Intention: intention_01km3c2s7xeamb7gkfjkve90ma
+
+# Fix consumer polling timeout semantics
 
 This ExecPlan is a living document. The sections Progress, Surprises & Discoveries,
 Decision Log, and Outcomes & Retrospective must be kept up to date as work proceeds.

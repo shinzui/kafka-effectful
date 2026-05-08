@@ -1,6 +1,14 @@
-# Support sync publish and producer best practices
+---
+id: 7
+slug: support-sync-publish-and-producer-best-practices
+title: "Support sync publish and producer best practices"
+kind: exec-plan
+created_at: 2026-04-22T12:36:13Z
+intention: "intention_01km3c2s7xeamb7gkfjkve90ma"
+---
 
-Intention: intention_01km3c2s7xeamb7gkfjkve90ma
+
+# Support sync publish and producer best practices
 
 This ExecPlan is a living document. The sections Progress, Surprises & Discoveries,
 Decision Log, and Outcomes & Retrospective must be kept up to date as work proceeds.

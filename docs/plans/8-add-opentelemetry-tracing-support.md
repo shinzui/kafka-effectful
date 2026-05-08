@@ -1,6 +1,14 @@
-# Add OpenTelemetry tracing support compatible with shibuya-kafka-adapter
+---
+id: 8
+slug: add-opentelemetry-tracing-support
+title: "Add OpenTelemetry tracing support compatible with shibuya-kafka-adapter"
+kind: exec-plan
+created_at: 2026-05-07T03:17:02Z
+intention: "intention_01kr03xss6ejgs4n4ssz3vr2qv"
+---
 
-Intention: intention_01kr03xss6ejgs4n4ssz3vr2qv
+
+# Add OpenTelemetry tracing support compatible with shibuya-kafka-adapter
 
 This ExecPlan is a living document. The sections Progress, Surprises & Discoveries,
 Decision Log, and Outcomes & Retrospective must be kept up to date as work proceeds.

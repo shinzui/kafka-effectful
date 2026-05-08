@@ -1,7 +1,15 @@
-# Polish README and release docs
+---
+id: 6
+slug: polish-readme-and-docs
+title: "Polish README and release docs"
+kind: exec-plan
+created_at: 2026-04-17T03:34:04Z
+intention: "intention_01km3c2s7xeamb7gkfjkve90ma"
+master_plan: "docs/masterplans/1-prepare-kafka-effectful-0-1-release.md"
+---
 
-MasterPlan: docs/masterplans/1-prepare-kafka-effectful-0-1-release.md
-Intention: intention_01km3c2s7xeamb7gkfjkve90ma
+
+# Polish README and release docs
 
 This ExecPlan is a living document. The sections Progress, Surprises & Discoveries,
 Decision Log, and Outcomes & Retrospective must be kept up to date as work proceeds.

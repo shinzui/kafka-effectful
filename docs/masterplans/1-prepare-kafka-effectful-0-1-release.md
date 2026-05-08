@@ -1,6 +1,14 @@
-# Prepare kafka-effectful 0.1 Release
+---
+id: 1
+slug: prepare-kafka-effectful-0-1-release
+title: "Prepare kafka-effectful 0.1 Release"
+kind: master-plan
+created_at: 2026-04-17T03:47:35Z
+intention: "intention_01km3c2s7xeamb7gkfjkve90ma"
+---
 
-Intention: intention_01km3c2s7xeamb7gkfjkve90ma
+
+# Prepare kafka-effectful 0.1 Release
 
 This MasterPlan is a living document. The sections Progress, Surprises & Discoveries,
 Decision Log, and Outcomes & Retrospective must be kept up to date as work proceeds.
