@@ -4,6 +4,22 @@ All notable changes to `kafka-effectful` are documented here.
 
 This package follows the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
+## Unreleased
+
+- Upgrade OpenTelemetry support to the `hs-opentelemetry` 1.0 package
+  family. The library now allows `hs-opentelemetry-api ^>=1.0`,
+  `hs-opentelemetry-sdk ^>=1.0`, 1.0 exporters, and
+  `hs-opentelemetry-semantic-conventions >=1.40 && <2`.
+- Align Kafka messaging attributes with the v1.40 semantic-convention
+  behavior used by `hs-opentelemetry-instrumentation-hw-kafka-client`
+  1.0. Legacy messaging keys remain the default; set
+  `OTEL_SEMCONV_STABILITY_OPT_IN=messaging` for stable names or
+  `OTEL_SEMCONV_STABILITY_OPT_IN=messaging/dup` to emit both during
+  migration.
+- Propagation now uses the OpenTelemetry 1.0 `TextMap` carrier
+  internally while preserving the existing request-header bridge
+  helpers for callers that imported them directly.
+
 ## 0.2.0.0 — 2026-05-06
 
 Additive release. No breaking changes to existing modules.

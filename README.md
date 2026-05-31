@@ -238,11 +238,18 @@ distributed tracing without changing any effect-level code. The
 traced interpreters open a `Producer`-kind span around every
 record-sending operation and a `Consumer`-kind span around every
 successful `pollMessage` / per-record success of `pollMessageBatch`,
-populated with the OpenTelemetry messaging semantic conventions
-(`messaging.system`, `messaging.destination.name`,
-`messaging.operation`, `messaging.kafka.destination.partition`,
+populated with the OpenTelemetry messaging semantic conventions.
+By default the attributes use the legacy-compatible names emitted by
+`hs-opentelemetry`'s Kafka instrumentation (`messaging.system`,
+`messaging.destination.name`, `messaging.operation`,
+`messaging.kafka.destination.partition`,
 `messaging.kafka.message.offset`, `messaging.kafka.message.key`,
-`messaging.kafka.consumer.group`). The current OTel context is
+`messaging.kafka.consumer.group`). Set
+`OTEL_SEMCONV_STABILITY_OPT_IN=messaging` to emit the stable v1.40
+operation and consumer-group names (`messaging.operation.name`,
+`messaging.operation.type`, `messaging.consumer.group.name`) instead,
+or `OTEL_SEMCONV_STABILITY_OPT_IN=messaging/dup` to emit both old and
+stable names while migrating dashboards. The current OTel context is
 injected into the outgoing record's headers as W3C `traceparent` /
 `tracestate` so downstream consumers can extract it and continue the
 trace.

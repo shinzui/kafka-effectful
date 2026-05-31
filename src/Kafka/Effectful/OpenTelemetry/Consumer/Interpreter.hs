@@ -32,7 +32,6 @@ where
 import Control.Monad (void)
 import Data.ByteString (ByteString)
 import Data.Foldable (for_)
-import Data.Map.Strict qualified as Map
 import Effectful (Eff, IOE, (:>))
 import Effectful qualified
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
@@ -41,7 +40,7 @@ import Effectful.Exception (ExitCase (..))
 import Effectful.Exception qualified as Exception
 import Kafka.Consumer (RdKafkaRespErrT (..))
 import Kafka.Consumer qualified as K
-import Kafka.Consumer.ConsumerProperties (ConsumerProperties (cpProps))
+import Kafka.Consumer.ConsumerProperties (ConsumerProperties)
 import Kafka.Consumer.Subscription (Subscription)
 import Kafka.Consumer.Types (ConsumerRecord (crTopic))
 import Kafka.Effectful.Consumer.Effect (KafkaConsumer (..))
@@ -49,14 +48,12 @@ import Kafka.Effectful.OpenTelemetry.Propagation (
     extractTraceContextFromRecord,
  )
 import Kafka.Effectful.OpenTelemetry.Semantic (
-    consumerRecordAttributes,
+    consumerRecordAttributesWith,
     consumerSpanName,
  )
 import Kafka.Types (KafkaError (..))
-import OpenTelemetry.Attributes.Attribute (toAttribute)
-import OpenTelemetry.Attributes.Map (AttributeMap, insertAttributeByKey)
 import OpenTelemetry.Context.ThreadLocal (attachContext, getContext)
-import OpenTelemetry.SemanticConventions (messaging_kafka_consumer_group)
+import OpenTelemetry.SemanticsConfig (getSemanticsOptions, lookupStability)
 import OpenTelemetry.Trace.Core (
     SpanArguments (kind),
     SpanKind (Consumer),
@@ -189,23 +186,14 @@ withConsumerSpan ::
     Eff es a ->
     Eff es a
 withConsumerSpan tracer props cr action = do
+    semOpts <- Effectful.liftIO $ lookupStability "messaging" <$> getSemanticsOptions
     inboundCtx <- Effectful.liftIO $ do
         currentCtx <- getContext
         extractTraceContextFromRecord cr currentCtx
     void $ attachContext inboundCtx
-    inSpan'' tracer (consumerSpanName (crTopic cr)) spanArgs $ \_span -> action
+    inSpan'' tracer (consumerSpanName (crTopic cr)) (spanArgs semOpts) $ \_span -> action
   where
-    spanArgs =
+    spanArgs semOpts =
         addAttributesToSpanArguments
-            (withConsumerGroup (consumerRecordAttributes cr))
+            (consumerRecordAttributesWith semOpts props cr)
             defaultSpanArguments{kind = Consumer}
-
-    withConsumerGroup :: AttributeMap -> AttributeMap
-    withConsumerGroup attrs =
-        case Map.lookup "group.id" (cpProps props) of
-            Just groupId ->
-                insertAttributeByKey
-                    messaging_kafka_consumer_group
-                    (toAttribute groupId)
-                    attrs
-            Nothing -> attrs

@@ -32,6 +32,7 @@ where
 
 import Control.Concurrent.MVar qualified as Concurrent
 import Data.Foldable (for_)
+import Data.Text qualified as Text
 import Effectful (Eff, IOE, (:>))
 import Effectful qualified
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
@@ -41,7 +42,7 @@ import Kafka.Effectful.OpenTelemetry.Propagation (
     injectTraceContextIntoRecord,
  )
 import Kafka.Effectful.OpenTelemetry.Semantic (
-    producerRecordAttributes,
+    producerRecordAttributesWith,
     producerSpanName,
  )
 import Kafka.Effectful.Producer.Effect (KafkaProducer (..))
@@ -50,15 +51,22 @@ import Kafka.Producer qualified as K
 import Kafka.Producer.ProducerProperties (ProducerProperties)
 import Kafka.Transaction qualified as K
 import Kafka.Types (KafkaError)
+import OpenTelemetry.Attributes.Key (unkey)
 import OpenTelemetry.Context qualified as Context
 import OpenTelemetry.Context.ThreadLocal (getContext)
+import OpenTelemetry.SemanticConventions (error_type)
+import OpenTelemetry.SemanticsConfig (getSemanticsOptions, lookupStability)
 import OpenTelemetry.Trace.Core (
+    Span,
     SpanArguments (kind),
     SpanKind (Producer),
+    SpanStatus (Error),
     Tracer,
+    addAttribute,
     addAttributesToSpanArguments,
     defaultSpanArguments,
     inSpan'',
+    setStatus,
  )
 
 {- | Run the 'KafkaProducer' effect with OpenTelemetry tracing.
@@ -102,32 +110,42 @@ handleTracedProducer ::
     EffectHandler KafkaProducer es
 handleTracedProducer tracer producer _env = \case
     ProduceMessage record ->
-        withProducerSpan tracer record $ \instrumentedRecord -> do
+        withProducerSpan tracer record $ \span_ instrumentedRecord -> do
             mbErr <- Effectful.liftIO $ K.produceMessage producer instrumentedRecord
-            for_ mbErr throwError
+            for_ mbErr $ \err -> do
+                recordKafkaError span_ err
+                throwError err
     ProduceMessage' record cb ->
-        withProducerSpan tracer record $ \instrumentedRecord -> do
+        withProducerSpan tracer record $ \span_ instrumentedRecord -> do
             res <-
                 Effectful.liftIO $
                     K.produceMessage' producer instrumentedRecord cb
             case res of
-                Left (K.ImmediateError err) -> throwError err
+                Left (K.ImmediateError err) -> do
+                    recordKafkaError span_ err
+                    throwError err
                 Right () -> pure ()
     ProduceMessageSync record ->
-        withProducerSpan tracer record $ \instrumentedRecord -> do
+        withProducerSpan tracer record $ \span_ instrumentedRecord -> do
             var <- Effectful.liftIO Concurrent.newEmptyMVar
             res <-
                 Effectful.liftIO $
                     K.produceMessage' producer instrumentedRecord (Concurrent.putMVar var)
             case res of
-                Left (K.ImmediateError err) -> throwError err
+                Left (K.ImmediateError err) -> do
+                    recordKafkaError span_ err
+                    throwError err
                 Right () -> do
                     Effectful.liftIO $ K.flushProducer producer
                     report <- Effectful.liftIO $ Concurrent.takeMVar var
                     case report of
                         K.DeliverySuccess _ offset -> pure offset
-                        K.DeliveryFailure _ err -> throwError err
-                        K.NoMessageError err -> throwError err
+                        K.DeliveryFailure _ err -> do
+                            recordKafkaError span_ err
+                            throwError err
+                        K.NoMessageError err -> do
+                            recordKafkaError span_ err
+                            throwError err
     ProduceMessageBatch records -> do
         -- One span per record so the Producer-kind attributes
         -- (partition, key) are per-record, matching the upstream
@@ -136,10 +154,11 @@ handleTracedProducer tracer producer _env = \case
         results <-
             traverse
                 ( \r ->
-                    withProducerSpan tracer r $ \instrumentedRecord -> do
+                    withProducerSpan tracer r $ \span_ instrumentedRecord -> do
                         mbErr <-
                             Effectful.liftIO $
                                 K.produceMessage producer instrumentedRecord
+                        for_ mbErr (recordKafkaError span_)
                         pure (r, mbErr)
                 )
                 records
@@ -175,17 +194,29 @@ withProducerSpan ::
     (IOE :> es) =>
     Tracer ->
     ProducerRecord ->
-    (ProducerRecord -> Eff es a) ->
+    (Span -> ProducerRecord -> Eff es a) ->
     Eff es a
-withProducerSpan tracer record action =
-    inSpan'' tracer (producerSpanName (prTopic record)) spanArgs $ \newSpan -> do
+withProducerSpan tracer record action = do
+    semOpts <- Effectful.liftIO $ lookupStability "messaging" <$> getSemanticsOptions
+    inSpan'' tracer (producerSpanName (prTopic record)) (spanArgs semOpts) $ \newSpan -> do
         ctx <- getContext
         instrumentedRecord <-
             Effectful.liftIO $
                 injectTraceContextIntoRecord (Context.insertSpan newSpan ctx) record
-        action instrumentedRecord
+        action newSpan instrumentedRecord
   where
-    spanArgs =
+    spanArgs semOpts =
         addAttributesToSpanArguments
-            (producerRecordAttributes record)
+            (producerRecordAttributesWith semOpts record)
             defaultSpanArguments{kind = Producer}
+
+recordKafkaError ::
+    (IOE :> es) =>
+    Span ->
+    KafkaError ->
+    Eff es ()
+recordKafkaError span_ err = do
+    let errText = Text.pack (show err)
+    Effectful.liftIO $ do
+        addAttribute span_ (unkey error_type) errText
+        setStatus span_ (Error errText)

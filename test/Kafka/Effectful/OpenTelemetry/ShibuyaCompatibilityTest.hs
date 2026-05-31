@@ -1,6 +1,6 @@
 module Kafka.Effectful.OpenTelemetry.ShibuyaCompatibilityTest (tests) where
 
-import Data.HashMap.Strict qualified as HashMap
+import Data.HashMap.Lazy qualified as HashMap
 import Data.Int (Int64)
 import Data.Text (Text)
 import Kafka.Consumer.Types (
@@ -22,15 +22,16 @@ import OpenTelemetry.SemanticConventions (
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertEqual, testCase)
 
-{- | Tests pinning @Kafka.Effectful.OpenTelemetry.Semantic@\'s
-'consumerRecordAttributes' against the attribute set that
+{- | Tests pinning @Kafka.Effectful.OpenTelemetry.Semantic@\'s legacy
+'consumerRecordAttributes' helper against the attribute set that
 @shibuya-kafka-adapter@\'s
 @Shibuya.Adapter.Kafka.Convert.kafkaSpanAttributes@ produces.
 
 Both libraries depend on @hs-opentelemetry-semantic-conventions@,
 so if upstream renames a key in a future release this test fails
-together with shibuya — the desired failure mode for a
-compatibility pin.
+together with shibuya for the legacy-mode compatibility pin. Stable
+OpenTelemetry messaging keys are covered separately in
+@SemanticTest@.
 -}
 tests :: TestTree
 tests =

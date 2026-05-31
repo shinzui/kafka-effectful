@@ -182,7 +182,7 @@ main = do
     case producerResult of
         Left (_cs, err) -> do
             hPutStrLn stderr $ "producer error: " <> show err
-            shutdownTracerProvider tp
+            _ <- shutdownTracerProvider tp Nothing
             exitFailure
         Right () -> pure ()
 
@@ -196,13 +196,13 @@ main = do
     case consumerResult of
         Left (_cs, err) -> do
             hPutStrLn stderr $ "consumer error: " <> show err
-            shutdownTracerProvider tp
+            _ <- shutdownTracerProvider tp Nothing
             exitFailure
         Right () -> pure ()
 
     pid <- readIORef producerTraceRef
     cid <- readIORef consumerTraceRef
-    shutdownTracerProvider tp
+    _ <- shutdownTracerProvider tp Nothing
     case (pid, cid) of
         (Just p, Just c) -> do
             putStrLn $ "[otel-tracing] producer trace id: " <> Text.unpack p

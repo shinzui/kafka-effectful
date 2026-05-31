@@ -28,13 +28,17 @@ module Kafka.Effectful.OpenTelemetry (
 
     -- * Attribute helpers
     producerRecordAttributes,
+    producerRecordAttributesWith,
     consumerRecordAttributes,
+    consumerRecordAttributesWith,
     producerSpanName,
     consumerSpanName,
 
     -- * Trace-context propagation
     extractTraceContextFromRecord,
     injectTraceContextIntoRecord,
+    kafkaHeadersToTextMap,
+    textMapToKafkaHeaders,
     kafkaHeadersToRequestHeaders,
     requestHeadersToKafkaHeaders,
 )
@@ -46,11 +50,15 @@ import Kafka.Effectful.OpenTelemetry.Propagation (
     extractTraceContextFromRecord,
     injectTraceContextIntoRecord,
     kafkaHeadersToRequestHeaders,
+    kafkaHeadersToTextMap,
     requestHeadersToKafkaHeaders,
+    textMapToKafkaHeaders,
  )
 import Kafka.Effectful.OpenTelemetry.Semantic (
     consumerRecordAttributes,
+    consumerRecordAttributesWith,
     consumerSpanName,
     producerRecordAttributes,
+    producerRecordAttributesWith,
     producerSpanName,
  )

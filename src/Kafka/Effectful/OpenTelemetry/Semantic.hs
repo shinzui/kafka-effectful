@@ -11,12 +11,11 @@ framework wrapper can produce the same spec-aligned attribute set
 without having to redefine the keys themselves.
 
 The attribute keys and value types follow the OpenTelemetry messaging
-spec v1.24 as exposed by
-@hs-opentelemetry-semantic-conventions@, and they intentionally
-agree with what
-@shibuya-kafka-adapter@\'s @Shibuya.Adapter.Kafka.Convert@ produces
-(@kafkaSpanAttributes@), so the two libraries can be layered without
-attribute key drift.
+semantic conventions v1.40 as exposed by
+@hs-opentelemetry-semantic-conventions@. Operation and consumer-group
+keys follow @hs-opentelemetry-api@ 1.0\'s stability opt-in policy:
+legacy by default, stable with @OTEL_SEMCONV_STABILITY_OPT_IN=messaging@,
+and both with @OTEL_SEMCONV_STABILITY_OPT_IN=messaging\/dup@.
 
 The design parallels the upstream
 @hs-opentelemetry-instrumentation-hw-kafka-client@\'s
@@ -36,33 +35,45 @@ module Kafka.Effectful.OpenTelemetry.Semantic (
 
     -- * Attribute builders
     producerRecordAttributes,
+    producerRecordAttributesWith,
     consumerRecordAttributes,
+    consumerRecordAttributesWith,
 )
 where
 
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Int (Int64)
+import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8')
+import Kafka.Consumer.ConsumerProperties (ConsumerProperties (cpProps))
 import Kafka.Consumer.Types (
-    ConsumerRecord (crKey, crOffset, crPartition, crTopic),
+    ConsumerRecord (crKey, crOffset, crPartition, crTopic, crValue),
     Offset (unOffset),
  )
 import Kafka.Producer.Types (
     ProducePartition (SpecifiedPartition, UnassignedPartition),
-    ProducerRecord (prKey, prPartition, prTopic),
+    ProducerRecord (prKey, prPartition, prTopic, prValue),
  )
 import Kafka.Types (PartitionId (unPartitionId), TopicName (..))
 import OpenTelemetry.Attributes.Attribute (toAttribute)
 import OpenTelemetry.Attributes.Map (AttributeMap, insertAttributeByKey)
 import OpenTelemetry.SemanticConventions (
+    messaging_client_id,
+    messaging_consumer_group_name,
     messaging_destination_name,
+    messaging_kafka_consumer_group,
     messaging_kafka_destination_partition,
     messaging_kafka_message_key,
     messaging_kafka_message_offset,
+    messaging_message_body_size,
     messaging_operation,
+    messaging_operation_name,
+    messaging_operation_type,
     messaging_system,
  )
+import OpenTelemetry.SemanticsConfig (StabilityOpt (..))
 
 {- | The constant @"kafka"@ used as the value of the
 @messaging.system@ attribute.
@@ -111,20 +122,38 @@ since the broker will pick the partition), and
 is present and decodes as UTF-8.
 -}
 producerRecordAttributes :: ProducerRecord -> AttributeMap
-producerRecordAttributes record =
-    addOperation
+producerRecordAttributes = producerRecordAttributesWith Old
+
+{- | Build the OpenTelemetry attribute map for a Producer-kind span
+using the supplied messaging semantic-convention stability mode.
+-}
+producerRecordAttributesWith ::
+    StabilityOpt ->
+    ProducerRecord ->
+    AttributeMap
+producerRecordAttributesWith semOpts record =
+    addOperation semOpts
         . addDestination
         . addPartition
         . addKey
+        . addBodySize
         . addSystem
         $ mempty
   where
     addSystem =
         insertAttributeByKey messaging_system $
             toAttribute kafkaMessagingSystem
-    addOperation =
-        insertAttributeByKey messaging_operation $
-            toAttribute producerOperationName
+    addOperation = \case
+        Old ->
+            insertAttributeByKey messaging_operation $
+                toAttribute producerOperationName
+        Stable ->
+            insertAttributeByKey messaging_operation_name (toAttribute producerOperationName)
+                . insertAttributeByKey messaging_operation_type (toAttribute producerOperationName)
+        StableAndOld ->
+            insertAttributeByKey messaging_operation (toAttribute producerOperationName)
+                . insertAttributeByKey messaging_operation_name (toAttribute producerOperationName)
+                . insertAttributeByKey messaging_operation_type (toAttribute producerOperationName)
     addDestination =
         insertAttributeByKey messaging_destination_name $
             toAttribute (unTopicName (prTopic record))
@@ -138,6 +167,11 @@ producerRecordAttributes record =
             insertAttributeByKey messaging_kafka_message_key $
                 toAttribute k
         Nothing -> id
+    addBodySize = case prValue record of
+        Just v ->
+            insertAttributeByKey messaging_message_body_size $
+                toAttribute (fromIntegral (BS.length v) :: Int64)
+        Nothing -> id
 
 {- | Build the OpenTelemetry attribute map for a Consumer-kind span
 describing a single 'ConsumerRecord'.
@@ -150,30 +184,92 @@ The map always includes @messaging.system=kafka@,
 @messaging.kafka.message.key@ (Text) when the record\'s @crKey@
 is present and decodes as UTF-8.
 
-Note: @messaging.kafka.consumer.group@ is not added here because
-the consumer-group identifier lives on the
-@Kafka.Consumer.ConsumerProperties@ value, not on the record.
-Callers that need it (the traced interpreter does) add it on top
-of what this helper returns.
+Note: consumer-group and client-id attributes need
+@Kafka.Consumer.ConsumerProperties@, not just the record. Use
+'consumerRecordAttributesWith' when those properties are available.
 -}
 consumerRecordAttributes ::
     ConsumerRecord (Maybe ByteString) (Maybe ByteString) ->
     AttributeMap
-consumerRecordAttributes record =
-    addOperation
+consumerRecordAttributes = consumerRecordAttributesLegacy
+
+consumerRecordAttributesLegacy ::
+    ConsumerRecord (Maybe ByteString) (Maybe ByteString) ->
+    AttributeMap
+consumerRecordAttributesLegacy record =
+    addConsumerCommon Old record
+
+{- | Build the OpenTelemetry attribute map for a Consumer-kind span
+using the supplied messaging semantic-convention stability mode and
+consumer properties.
+-}
+consumerRecordAttributesWith ::
+    StabilityOpt ->
+    ConsumerProperties ->
+    ConsumerRecord (Maybe ByteString) (Maybe ByteString) ->
+    AttributeMap
+consumerRecordAttributesWith semOpts props record =
+    addConsumerGroup semOpts
+        . addClientId
+        $ addConsumerCommon semOpts record
+  where
+    addConsumerGroup = \case
+        Old -> addOldConsumerGroup
+        Stable -> addStableConsumerGroup
+        StableAndOld -> addOldConsumerGroup . addStableConsumerGroup
+    addOldConsumerGroup attrs =
+        case Map.lookup "group.id" (cpProps props) of
+            Just groupId ->
+                insertAttributeByKey
+                    messaging_kafka_consumer_group
+                    (toAttribute groupId)
+                    attrs
+            Nothing -> attrs
+    addStableConsumerGroup attrs =
+        case Map.lookup "group.id" (cpProps props) of
+            Just groupId ->
+                insertAttributeByKey
+                    messaging_consumer_group_name
+                    (toAttribute groupId)
+                    attrs
+            Nothing -> attrs
+    addClientId attrs =
+        case Map.lookup "client.id" (cpProps props) of
+            Just clientId ->
+                insertAttributeByKey
+                    messaging_client_id
+                    (toAttribute clientId)
+                    attrs
+            Nothing -> attrs
+
+addConsumerCommon ::
+    StabilityOpt ->
+    ConsumerRecord (Maybe ByteString) (Maybe ByteString) ->
+    AttributeMap
+addConsumerCommon semOpts record =
+    addOperation semOpts
         . addDestination
         . addPartition
         . addOffset
         . addKey
+        . addBodySize
         . addSystem
         $ mempty
   where
     addSystem =
         insertAttributeByKey messaging_system $
             toAttribute kafkaMessagingSystem
-    addOperation =
-        insertAttributeByKey messaging_operation $
-            toAttribute consumerOperationName
+    addOperation = \case
+        Old ->
+            insertAttributeByKey messaging_operation $
+                toAttribute consumerOperationName
+        Stable ->
+            insertAttributeByKey messaging_operation_name (toAttribute consumerOperationName)
+                . insertAttributeByKey messaging_operation_type (toAttribute consumerOperationName)
+        StableAndOld ->
+            insertAttributeByKey messaging_operation (toAttribute consumerOperationName)
+                . insertAttributeByKey messaging_operation_name (toAttribute consumerOperationName)
+                . insertAttributeByKey messaging_operation_type (toAttribute consumerOperationName)
     addDestination =
         insertAttributeByKey messaging_destination_name $
             toAttribute (unTopicName (crTopic record))
@@ -187,6 +283,11 @@ consumerRecordAttributes record =
         Just k ->
             insertAttributeByKey messaging_kafka_message_key $
                 toAttribute k
+        Nothing -> id
+    addBodySize = case crValue record of
+        Just v ->
+            insertAttributeByKey messaging_message_body_size $
+                toAttribute (fromIntegral (BS.length v) :: Int64)
         Nothing -> id
 
 {- | Decode message-key bytes as UTF-8, returning 'Nothing' if the

@@ -5,6 +5,7 @@ import Data.ByteString.Char8 qualified as BSC
 import Data.CaseInsensitive qualified as CI
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text.Encoding
 import Kafka.Consumer.Types (
     ConsumerRecord (..),
     Offset (..),
@@ -14,7 +15,9 @@ import Kafka.Effectful.OpenTelemetry.Propagation (
     extractTraceContextFromRecord,
     injectTraceContextIntoRecord,
     kafkaHeadersToRequestHeaders,
+    kafkaHeadersToTextMap,
     requestHeadersToKafkaHeaders,
+    textMapToKafkaHeaders,
  )
 import Kafka.Producer.Types (
     ProducePartition (UnassignedPartition),
@@ -27,6 +30,7 @@ import Kafka.Types (
     headersToList,
  )
 import OpenTelemetry.Context qualified as Context
+import OpenTelemetry.Propagator (textMapLookup)
 import OpenTelemetry.Trace (initializeGlobalTracerProvider)
 import OpenTelemetry.Trace.Core (
     SpanContext (..),
@@ -71,7 +75,25 @@ tests =
     withResource initializeGlobalTracerProvider (\_ -> pure ()) $ \_ ->
         testGroup
             "Propagation"
-            [ testCase "round-trip kafka headers <-> request headers (case-fold)" $ do
+            [ testCase "round-trip kafka headers <-> TextMap" $ do
+                let original =
+                        headersFromList
+                            [ ("traceparent", sampleTraceparent)
+                            , ("Custom-Header", "value")
+                            ]
+                    roundTripped =
+                        textMapToKafkaHeaders
+                            (kafkaHeadersToTextMap original)
+                lookup "traceparent" (headersToList roundTripped)
+                    `shouldBeJust` sampleTraceparent
+                lookup "Custom-Header" (headersToList roundTripped)
+                    `shouldBeJust` "value"
+            , testCase "kafkaHeadersToTextMap provides case-insensitive lookup" $ do
+                let h = headersFromList [("TraceParent", sampleTraceparent)]
+                    tm = kafkaHeadersToTextMap h
+                textMapLookup "traceparent" tm
+                    `shouldBeJust` Text.Encoding.decodeUtf8 sampleTraceparent
+            , testCase "request header compatibility helpers still case-fold" $ do
                 let original =
                         headersFromList
                             [ ("traceparent", sampleTraceparent)
