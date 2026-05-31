@@ -13,6 +13,35 @@ Provides typed, composable `KafkaProducer` and `KafkaConsumer` effects for the [
 - Resource-safe interpreters that acquire and release Kafka handles via `bracket`
 - Errors surfaced through `Effectful.Error.Static` (`Error KafkaError`)
 
+## Local Kafka and Jaeger
+
+This repo includes the same Redpanda + Jaeger `process-compose`
+setup used by `shibuya-kafka-adapter`. It uses `rpk container`, so
+Docker or a compatible Docker socket provider such as Colima must be
+running. From a dev shell, start the services in one terminal:
+
+```bash
+just process-up
+```
+
+Then create the example topics and run the OpenTelemetry tracing
+demo from another terminal:
+
+```bash
+just create-topics
+just otel-example
+```
+
+`just otel-example` produces one record to Redpanda, consumes it back,
+and prints matching producer and consumer trace IDs. Jaeger receives
+OTLP on `localhost:4318`, and its UI is available at
+`http://localhost:16686` while services are running. Stop everything
+with:
+
+```bash
+just process-down
+```
+
 ## Usage
 
 ### Producer

@@ -16,7 +16,7 @@
         formatter = treefmtEval.config.build.wrapper;
 
         # Feature flags
-        withProcessCompose = false;
+        withProcessCompose = true;
         withPostgresql = false;
       in
       {
