@@ -1,9 +1,9 @@
 let Schema =
-      https://raw.githubusercontent.com/shinzui/mori-schema/1f70781427426c09673d46f8e6733b7e7d0abedc/package.dhall
-        sha256:3b79aae9216456678300441ca8616b64a4b4fa520a1286dfcc418f60899d5d4a
+      https://raw.githubusercontent.com/shinzui/mori-schema/026ae74331e5c516542af1dd96f041c658ed4621/package.dhall
+        sha256:18258ef583580a897f4af3e7c86db0342afb42fb40efc535b217ba1089230141
 
 let Cookbook =
-      https://raw.githubusercontent.com/shinzui/mori-schema/1f70781427426c09673d46f8e6733b7e7d0abedc/extensions/cookbook/package.dhall
+      https://raw.githubusercontent.com/shinzui/mori-schema/026ae74331e5c516542af1dd96f041c658ed4621/extensions/cookbook/package.dhall
         sha256:5d41094fcc37d35ddef48af2e0401764d0ae77f9bd25127a979473b964affbb7
 
 in  Cookbook.CookbookCatalog::{ entries =
