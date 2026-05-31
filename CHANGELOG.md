@@ -4,12 +4,25 @@ All notable changes to `kafka-effectful` are documented here.
 
 This package follows the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
-## Unreleased
+## 0.3.0.0 — 2026-05-31
+
+### Breaking Changes
 
 - Upgrade OpenTelemetry support to the `hs-opentelemetry` 1.0 package
-  family. The library now allows `hs-opentelemetry-api ^>=1.0`,
+  family. The library now requires `hs-opentelemetry-api ^>=1.0`,
   `hs-opentelemetry-sdk ^>=1.0`, 1.0 exporters, and
-  `hs-opentelemetry-semantic-conventions >=1.40 && <2`.
+  `hs-opentelemetry-semantic-conventions >=1.40 && <2`. Downstream
+  build plans pinned to the 0.x package family must upgrade.
+
+### New Features
+
+- Add `producerRecordAttributesWith` and `consumerRecordAttributesWith`
+  attribute builders that honor the semantic-convention stability mode.
+- Add `kafkaHeadersToTextMap` and `textMapToKafkaHeaders` propagation
+  helpers built on the OpenTelemetry 1.0 `TextMap` carrier.
+
+### Other Changes
+
 - Align Kafka messaging attributes with the v1.40 semantic-convention
   behavior used by `hs-opentelemetry-instrumentation-hw-kafka-client`
   1.0. Legacy messaging keys remain the default; set
