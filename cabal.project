@@ -18,9 +18,14 @@ packages: .
 -- same stanza to its own cabal.project, or it silently keeps async-mode fatal
 -- blindness.
 --
+-- Based on upstream main (not the v5.3.0 tag), so it also carries upstream's
+-- own consumer fixes since that release -- notably the partition-list leak fix
+-- in storeOffsets/storeOffsetMessage. Note upstream has not bumped the version,
+-- so this tree still calls itself 5.3.0 while containing unreleased work.
+--
 -- Pinned by commit, never by branch, so the resolution is reproducible.
 -- Remove this stanza to fall back to Hackage hw-kafka-client 5.3.0 exactly.
 source-repository-package
   type: git
   location: https://github.com/shinzui/hw-kafka-client.git
-  tag: 5259ddf3c8811b662470b773f8c3d7ed52602c7e
+  tag: 6caed636898a78e9f6e5a9c93eeb5562cbb2580a
