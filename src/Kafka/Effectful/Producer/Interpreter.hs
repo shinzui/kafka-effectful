@@ -59,10 +59,19 @@ handleProducer producer _env = \case
             Left (K.ImmediateError err) -> throwError err
             Right () -> pure ()
     ProduceMessageBatch records -> Effectful.liftIO $ do
-        -- Hackage hw-kafka-client-5.3.0 does not export
-        -- 'Kafka.Producer.produceMessageBatch', so we inline the same
-        -- definition it ships on master: mapM over the list and keep
-        -- only the records that failed to enqueue.
+        -- This is a per-record loop, not a batch send, and it saves no
+        -- network round-trips over calling produceMessage yourself. The
+        -- value here is the batch-shaped signature and the failed-record
+        -- result, not throughput.
+        --
+        -- hw-kafka-client exports no batch produce at all. It removed its
+        -- Haskell-level produceMessageBatch in 72e6f6d (Oct 2021, before
+        -- v5.3.0), and that function was itself a mapM over produceMessage.
+        -- Real batching would need a binding for librdkafka's
+        -- rd_kafka_produce_batch, which the package has never had.
+        --
+        -- Tracked as upstream issue 'hw-kafka-client-no-produce-batch-binding';
+        -- run `mori upstream-issues show hw-kafka-client-no-produce-batch-binding`.
         results <- mapM (\r -> (r,) <$> K.produceMessage producer r) records
         pure [(r, err) | (r, Just err) <- results]
     ProduceMessageSync record -> do

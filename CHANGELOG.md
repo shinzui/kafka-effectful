@@ -44,6 +44,19 @@ This package follows the [Haskell Package Versioning Policy](https://pvp.haskell
   filters headers to the propagator's own declared fields, so application
   payload headers never reach the decoder at all.
 
+### Documentation
+
+- Corrected the `produceMessageBatch` docs. The 0.2.0.0 entry below says the
+  interpreter inlines "the upstream definition" because Hackage 5.3.0 "does not
+  re-export" it. Both halves are wrong: upstream *deleted* the function in
+  October 2021, before v5.3.0, and it is absent from upstream `main` too — the
+  copy that suggested otherwise was a local addition in our corpus checkout.
+  More usefully, the function does not batch: it loops calling
+  `produceMessage`, so it saves no network round-trips. Throughput comes from
+  `linger.ms` / `batch.size`, which apply to every produce call. Now tracked as
+  upstream issue `hw-kafka-client-no-produce-batch-binding` in
+  `mori/upstream-issues.dhall`.
+
 ### Added
 
 - `Kafka.Effectful.Consumer.Classify`, a new exposed module holding the in-band

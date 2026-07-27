@@ -105,10 +105,16 @@ idempotentProps =
 
 ##### Scenario 4 — High-throughput batching
 
-Combine `produceMessageBatch` with `linger.ms`, `batch.size`, and
-`compression` to trade a few milliseconds of latency for substantially
-higher throughput. The result contains only records that failed to
-enqueue.
+Set `linger.ms`, `batch.size`, and `compression` to trade a few
+milliseconds of latency for substantially higher throughput. That is where
+the batching happens: librdkafka coalesces its own send queue, for every
+produce call.
+
+`produceMessageBatch` is a convenience over that, not a second lever — it
+loops calling `produceMessage` per record and returns only the records that
+failed to enqueue. Using it does not reduce network round-trips; `hw-kafka-client`
+exposes no API-level batch send (tracked as upstream issue
+`hw-kafka-client-no-produce-batch-binding`, see `mori upstream-issues show`).
 
 ```haskell
 batchProps =

@@ -116,11 +116,24 @@ produceMessageSync = send . ProduceMessageSync
 
 Returns only the records that failed to enqueue, paired with the
 error librdkafka reported for that record. Successful records are
-omitted. This mirrors @Kafka.Producer.produceMessageBatch@.
+omitted.
 
-Combined with @linger.ms@ and @batch.size@ set on the
-@ProducerProperties@, this is the throughput-oriented path — Scenario
-4 of @hw-kafka-client@'s producer best practices.
+__This is a per-record loop, not a batch send.__ It issues one
+@produceMessage@ per record and therefore saves no network
+round-trips over calling 'produceMessage' yourself in a loop. What it
+gives you is the batch-shaped signature and the collected failures.
+
+Throughput comes from @linger.ms@, @batch.size@ and @compression@ on
+the @ProducerProperties@ — librdkafka coalesces its own send queue,
+and it does so for every produce call regardless of which function
+you use. Setting those and calling 'produceMessage' performs
+identically.
+
+@hw-kafka-client@ exposes no API-level batch send: it removed its own
+@produceMessageBatch@ in October 2021 (and that was a @mapM@ too), and
+librdkafka's @rd_kafka_produce_batch@ has never been bound. Tracked as
+upstream issue @hw-kafka-client-no-produce-batch-binding@ — run
+@mori upstream-issues show hw-kafka-client-no-produce-batch-binding@.
 
 @since 0.2.0.0
 -}
