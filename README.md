@@ -226,8 +226,16 @@ example =
           loop
 ```
 
-`pollMessage` returns `Nothing` when the timeout elapses without a message
-arriving; non-timeout failures are thrown via the `Error KafkaError` effect.
+`pollMessage` returns `Nothing` when nothing was delivered. That covers the
+timeout, and also three partition-scoped conditions that librdkafka reports as
+errors but which a healthy consumer meets in normal operation: partition EOF,
+an offset reset, and an as-yet-unknown topic or partition. Everything else --
+transport failures, authentication failures, and fatal errors among them -- is
+thrown via the `Error KafkaError` effect.
+
+Use `pollMessageEither` when you need to see those conditions rather than have
+them swallowed, for example to detect partition EOF in a bounded read. The full
+policy, and the reasoning for each code, is in `Kafka.Effectful.Consumer.Classify`.
 
 ### Running it
 

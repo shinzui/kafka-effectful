@@ -22,6 +22,11 @@ import Kafka.Consumer (RdKafkaRespErrT (..))
 import Kafka.Consumer qualified as K
 import Kafka.Consumer.ConsumerProperties (ConsumerProperties)
 import Kafka.Consumer.Subscription (Subscription)
+import Kafka.Effectful.Consumer.Classify (
+    PollErrorDisposition (..),
+    classifyPollError,
+    isBenignCommitError,
+ )
 import Kafka.Effectful.Consumer.Effect (KafkaConsumer (..))
 import Kafka.Types (KafkaError (..))
 
@@ -67,14 +72,18 @@ handleConsumer consumer _env = \case
     PollMessage timeout -> do
         result <- Effectful.liftIO $ K.pollMessage consumer timeout
         case result of
-            Left (KafkaResponseError RdKafkaRespErrTimedOut) -> pure Nothing
-            Left err -> throwError err
+            Left err -> case classifyPollError err of
+                PollTimeout -> pure Nothing
+                PollBenign -> pure Nothing
+                PollThrow -> throwError err
             Right msg -> pure (Just msg)
+    PollMessageEither timeout ->
+        Effectful.liftIO $ K.pollMessage consumer timeout
     PollMessageBatch timeout batchSize ->
         Effectful.liftIO $ K.pollMessageBatch consumer timeout batchSize
-    CommitOffsetMessage oc cr -> throwOnJust $ K.commitOffsetMessage oc consumer cr
-    CommitAllOffsets oc -> throwOnJust $ K.commitAllOffsets oc consumer
-    CommitPartitionsOffsets oc tps -> throwOnJust $ K.commitPartitionsOffsets oc consumer tps
+    CommitOffsetMessage oc cr -> throwOnJustCommit $ K.commitOffsetMessage oc consumer cr
+    CommitAllOffsets oc -> throwOnJustCommit $ K.commitAllOffsets oc consumer
+    CommitPartitionsOffsets oc tps -> throwOnJustCommit $ K.commitPartitionsOffsets oc consumer tps
     StoreOffsets tps -> throwOnJust $ K.storeOffsets consumer tps
     StoreOffsetMessage cr -> throwOnJust $ K.storeOffsetMessage consumer cr
     Assign tps -> throwOnJust $ K.assign consumer tps
@@ -92,6 +101,12 @@ handleConsumer consumer _env = \case
     throwOnJust action' = do
         mbErr <- Effectful.liftIO action'
         for_ mbErr throwError
+
+    -- Commits get their own thrower: "nothing to commit" is a success.
+    throwOnJustCommit action' = do
+        mbErr <- Effectful.liftIO action'
+        for_ mbErr $ \err ->
+            if isBenignCommitError err then pure () else throwError err
 
     throwOnLeft action' = do
         result <- Effectful.liftIO action'

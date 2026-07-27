@@ -38,6 +38,7 @@ library
   exposed-modules:
     Kafka.Effectful
     Kafka.Effectful.Consumer
+    Kafka.Effectful.Consumer.Classify
     Kafka.Effectful.Consumer.Effect
     Kafka.Effectful.Consumer.Interpreter
     Kafka.Effectful.OpenTelemetry
@@ -179,6 +180,9 @@ test-suite kafka-effectful-test
     TypeOperators
 
   other-modules:
+    Kafka.Effectful.Consumer.ClassifyTest
+    Kafka.Effectful.Consumer.InterpreterTest
+    Kafka.Effectful.OpenTelemetry.ConsumerSpanTest
     Kafka.Effectful.OpenTelemetry.PropagationTest
     Kafka.Effectful.OpenTelemetry.SemanticTest
     Kafka.Effectful.OpenTelemetry.ShibuyaCompatibilityTest

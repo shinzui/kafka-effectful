@@ -1,0 +1,26 @@
+packages: .
+
+-- hw-kafka-client fork: surfaces consumer fatal errors in async callback-poll
+-- mode and fixes the polled-message leak in the background callback loop.
+--
+-- Upstream (5.3.0) drops consumer-queue messages with `void` in
+-- pollConsumerEvents'. librdkafka delivers a raised fatal error to the
+-- high-level consumer only as a consumer error on that queue -- never through
+-- error_cb -- so in the default CallbackPollModeAsync a fatal error such as a
+-- fenced static group member is unobservable at every layer, and the
+-- application polls an empty side queue forever. The fork reports it in-band
+-- from pollMessage/pollMessageBatch, which is what lets this package's
+-- classifier (Kafka.Effectful.Consumer.Classify) actually see a fatal and
+-- throw on it in async mode.
+--
+-- Note that this pin governs builds *of this repository only*. A downstream
+-- package that depends on kafka-effectful does not inherit it and must add the
+-- same stanza to its own cabal.project, or it silently keeps async-mode fatal
+-- blindness.
+--
+-- Pinned by commit, never by branch, so the resolution is reproducible.
+-- Remove this stanza to fall back to Hackage hw-kafka-client 5.3.0 exactly.
+source-repository-package
+  type: git
+  location: https://github.com/shinzui/hw-kafka-client.git
+  tag: 5259ddf3c8811b662470b773f8c3d7ed52602c7e

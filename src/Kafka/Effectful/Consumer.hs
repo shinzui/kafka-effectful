@@ -7,6 +7,7 @@ module Kafka.Effectful.Consumer (
 
     -- * Polling
     pollMessage,
+    pollMessageEither,
     pollMessageBatch,
 
     -- * Offset Management
@@ -99,6 +100,6 @@ import Kafka.Consumer.ConsumerProperties (CallbackPollMode (..), ConsumerPropert
 import Kafka.Consumer.ConsumerProperties qualified as K
 import Kafka.Consumer.Subscription (Subscription (..), extraSubscriptionProps, offsetReset, topics)
 import Kafka.Consumer.Types (ConsumerGroupId (..), ConsumerRecord (..), Offset (..), OffsetCommit (..), OffsetReset (..), PartitionOffset (..), RebalanceEvent (..), SubscribedPartitions (..), Timestamp (..), TopicPartition (..))
-import Kafka.Effectful.Consumer.Effect (KafkaConsumer, askConsumerHandle, assign, assignment, commitAllOffsets, commitOffsetMessage, commitPartitionsOffsets, committed, pausePartitions, pollMessage, pollMessageBatch, position, resumePartitions, seekPartitions, storeOffsetMessage, storeOffsets, subscription)
+import Kafka.Effectful.Consumer.Effect (KafkaConsumer, askConsumerHandle, assign, assignment, commitAllOffsets, commitOffsetMessage, commitPartitionsOffsets, committed, pausePartitions, pollMessage, pollMessageBatch, pollMessageEither, position, resumePartitions, seekPartitions, storeOffsetMessage, storeOffsets, subscription)
 import Kafka.Effectful.Consumer.Interpreter (runKafkaConsumer)
 import Kafka.Types (BatchSize (..), BrokerAddress (..), ClientId (..), Headers, KafkaCompressionCodec (..), KafkaDebug (..), KafkaError (..), KafkaLogLevel (..), Millis (..), PartitionId (..), Timeout (..), TopicName (..), headersFromList, headersToList)

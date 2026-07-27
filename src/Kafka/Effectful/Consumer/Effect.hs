@@ -4,6 +4,7 @@ module Kafka.Effectful.Consumer.Effect (
 
     -- * Polling
     pollMessage,
+    pollMessageEither,
     pollMessageBatch,
 
     -- * Offset Management
@@ -54,6 +55,9 @@ data KafkaConsumer :: Effect where
     PollMessage ::
         Timeout ->
         KafkaConsumer m (Maybe (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+    PollMessageEither ::
+        Timeout ->
+        KafkaConsumer m (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
     PollMessageBatch ::
         Timeout ->
         BatchSize ->
@@ -108,15 +112,45 @@ type instance DispatchOf KafkaConsumer = 'Dynamic
 
 {- | Poll for a single message.
 
-Returns 'Nothing' when the timeout elapses without a message arriving.
-Throws 'KafkaError' via the 'Error' effect for any non-timeout failure
-(for example, a broker transport error or an assignment revocation).
+Returns 'Nothing' when nothing was delivered, which covers the timeout and
+three partition-scoped conditions that librdkafka reports as errors but which
+a healthy consumer is expected to meet during normal operation:
+
+* @RdKafkaRespErrPartitionEof@ — caught up with a partition.
+* @RdKafkaRespErrAutoOffsetReset@ — the position was reset, or a reset was
+  refused. Raised as a consumer error only under @auto.offset.reset=error@ or
+  when a reset itself fails; a successful reset after retention loss only
+  logs.
+* @RdKafkaRespErrUnknownTopicOrPart@ — the topic or partition is not known
+  yet, normal inside a topic-creation window.
+
+Every other in-band error is thrown as 'KafkaError' via the 'Error' effect —
+transport failures, authentication failures, and fatal errors among them.
+
+Use 'pollMessageEither' when you need to observe the swallowed conditions,
+for example to detect partition EOF in a bounded read. The full policy lives
+in "Kafka.Effectful.Consumer.Classify".
 -}
 pollMessage ::
     (KafkaConsumer :> es) =>
     Timeout ->
     Eff es (Maybe (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
 pollMessage = send . PollMessage
+
+{- | Poll for a single message, returning every in-band condition as a
+'Left' instead of swallowing or throwing it.
+
+Nothing is hidden: timeouts, partition EOF, offset resets and hard failures
+all arrive as @Left@. Use this for bounded reads that must observe partition
+EOF to know when to stop, or wherever the full librdkafka taxonomy matters.
+
+@since 0.4.0.0
+-}
+pollMessageEither ::
+    (KafkaConsumer :> es) =>
+    Timeout ->
+    Eff es (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+pollMessageEither = send . PollMessageEither
 
 -- | Poll for a batch of messages. Per-message errors are preserved in the 'Either'.
 pollMessageBatch ::
@@ -128,16 +162,28 @@ pollMessageBatch t b = send $ PollMessageBatch t b
 
 -- Offset Management
 
--- | Commit the offset of a specific message. Throws 'KafkaError' on failure.
+{- | Commit the offset of a specific message. Throws 'KafkaError' on failure.
+
+A commit that finds nothing to commit (@RdKafkaRespErrNoOffset@) is a
+success, not a failure — see "Kafka.Effectful.Consumer.Classify".
+-}
 commitOffsetMessage ::
     (KafkaConsumer :> es) => OffsetCommit -> ConsumerRecord k v -> Eff es ()
 commitOffsetMessage oc cr = send $ CommitOffsetMessage oc cr
 
--- | Commit offsets for all currently assigned partitions. Throws 'KafkaError' on failure.
+{- | Commit offsets for all currently assigned partitions. Throws
+'KafkaError' on failure.
+
+An idle consumer with nothing to commit succeeds rather than throwing; see
+'commitOffsetMessage'.
+-}
 commitAllOffsets :: (KafkaConsumer :> es) => OffsetCommit -> Eff es ()
 commitAllOffsets = send . CommitAllOffsets
 
--- | Commit offsets for specific partitions. Throws 'KafkaError' on failure.
+{- | Commit offsets for specific partitions. Throws 'KafkaError' on failure.
+
+A commit with nothing to commit succeeds; see 'commitOffsetMessage'.
+-}
 commitPartitionsOffsets ::
     (KafkaConsumer :> es) => OffsetCommit -> [TopicPartition] -> Eff es ()
 commitPartitionsOffsets oc tps = send $ CommitPartitionsOffsets oc tps

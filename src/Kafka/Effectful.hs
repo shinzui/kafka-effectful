@@ -25,6 +25,7 @@ module Kafka.Effectful (
 
     -- ** Polling
     pollMessage,
+    pollMessageEither,
     pollMessageBatch,
 
     -- ** Offset Management
@@ -117,6 +118,7 @@ import Kafka.Effectful.Consumer (
     pausePartitions,
     pollMessage,
     pollMessageBatch,
+    pollMessageEither,
     position,
     resumePartitions,
     runKafkaConsumer,
