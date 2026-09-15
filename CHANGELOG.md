@@ -71,6 +71,11 @@ This package follows the [Haskell Package Versioning Policy](https://pvp.haskell
 - The first tests for the consumer interpreters, covering the classifier
   taxonomy, brokerless interpreter behaviour, and trace-context hygiene.
 
+### Other Changes
+
+- Support `effectful-core` 2.7 (upper bound raised from `<2.7` to `<2.8`).
+  Built and tested against 2.7.1.2; no source changes were needed.
+
 ## 0.3.0.0 — 2026-05-31
 
 ### Breaking Changes
