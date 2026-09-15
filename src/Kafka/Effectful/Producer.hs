@@ -1,5 +1,5 @@
-module Kafka.Effectful.Producer (
-    -- * Effect
+module Kafka.Effectful.Producer
+  ( -- * Effect
     KafkaProducer,
 
     -- * Interpreter
@@ -67,11 +67,13 @@ module Kafka.Effectful.Producer (
     headersFromList,
     headersToList,
     Offset (..),
-)
+  )
 where
 
-import Kafka.Effectful.Producer.Effect (
-    KafkaProducer,
+-- Offset is in Consumer.Types
+import Kafka.Consumer.Types (Offset (..))
+import Kafka.Effectful.Producer.Effect
+  ( KafkaProducer,
     abortTransaction,
     askProducerHandle,
     beginTransaction,
@@ -82,20 +84,17 @@ import Kafka.Effectful.Producer.Effect (
     produceMessage',
     produceMessageBatch,
     produceMessageSync,
- )
+  )
 import Kafka.Effectful.Producer.Interpreter (runKafkaProducer)
 import Kafka.Effectful.Producer.Transaction (commitOffsetMessageTransaction)
 import Kafka.Producer.ProducerProperties (ProducerProperties (..))
 import Kafka.Producer.ProducerProperties qualified as K
 import Kafka.Producer.Types (DeliveryReport (..), ImmediateError (..), ProducePartition (..), ProducerRecord (..))
-import Kafka.Transaction (
-    TxError,
+import Kafka.Transaction
+  ( TxError,
     getKafkaError,
     kafkaErrorIsFatal,
     kafkaErrorIsRetriable,
     kafkaErrorTxnRequiresAbort,
- )
+  )
 import Kafka.Types (BrokerAddress (..), Headers, KafkaCompressionCodec (..), KafkaDebug (..), KafkaError (..), KafkaLogLevel (..), Timeout (..), TopicName (..), headersFromList, headersToList)
-
--- Offset is in Consumer.Types
-import Kafka.Consumer.Types (Offset (..))

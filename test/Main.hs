@@ -13,18 +13,18 @@ main = defaultMain tests
 
 tests :: TestTree
 tests =
-    testGroup
-        "kafka-effectful"
-        [ testGroup
-            "Kafka.Effectful.OpenTelemetry"
-            [ SemanticTest.tests
-            , PropagationTest.tests
-            , ShibuyaCompatibilityTest.tests
-            , ConsumerSpanTest.tests
-            ]
-        , testGroup
-            "Kafka.Effectful.Consumer"
-            [ ClassifyTest.tests
-            , InterpreterTest.tests
-            ]
+  testGroup
+    "kafka-effectful"
+    [ testGroup
+        "Kafka.Effectful.OpenTelemetry"
+        [ SemanticTest.tests,
+          PropagationTest.tests,
+          ShibuyaCompatibilityTest.tests,
+          ConsumerSpanTest.tests
+        ],
+      testGroup
+        "Kafka.Effectful.Consumer"
+        [ ClassifyTest.tests,
+          InterpreterTest.tests
         ]
+    ]

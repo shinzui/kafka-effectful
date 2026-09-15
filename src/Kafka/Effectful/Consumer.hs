@@ -1,5 +1,5 @@
-module Kafka.Effectful.Consumer (
-    -- * Effect
+module Kafka.Effectful.Consumer
+  ( -- * Effect
     KafkaConsumer,
 
     -- * Interpreter
@@ -93,7 +93,7 @@ module Kafka.Effectful.Consumer (
     Headers,
     headersFromList,
     headersToList,
-)
+  )
 where
 
 import Kafka.Consumer.ConsumerProperties (CallbackPollMode (..), ConsumerProperties (..))

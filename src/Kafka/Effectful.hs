@@ -1,5 +1,5 @@
-module Kafka.Effectful (
-    -- * Producer Effect
+module Kafka.Effectful
+  ( -- * Producer Effect
     KafkaProducer,
     runKafkaProducer,
     produceMessage,
@@ -89,11 +89,11 @@ module Kafka.Effectful (
     Headers,
     headersFromList,
     headersToList,
-)
+  )
 where
 
-import Kafka.Effectful.Consumer (
-    CallbackPollMode (..),
+import Kafka.Effectful.Consumer
+  ( CallbackPollMode (..),
     ConsumerGroupId (..),
     ConsumerProperties (..),
     ConsumerRecord (..),
@@ -127,9 +127,9 @@ import Kafka.Effectful.Consumer (
     storeOffsets,
     subscription,
     topics,
- )
-import Kafka.Effectful.Producer (
-    DeliveryReport (..),
+  )
+import Kafka.Effectful.Producer
+  ( DeliveryReport (..),
     ImmediateError (..),
     KafkaProducer,
     ProducePartition (..),
@@ -150,9 +150,9 @@ import Kafka.Effectful.Producer (
     produceMessageBatch,
     produceMessageSync,
     runKafkaProducer,
- )
-import Kafka.Types (
-    BatchSize (..),
+  )
+import Kafka.Types
+  ( BatchSize (..),
     BrokerAddress (..),
     ClientId (..),
     Headers,
@@ -166,4 +166,4 @@ import Kafka.Types (
     TopicName (..),
     headersFromList,
     headersToList,
- )
+  )

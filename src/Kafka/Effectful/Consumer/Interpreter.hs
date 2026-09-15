@@ -4,10 +4,10 @@
 -- 'interpret' to type-check. Suppress the warning at the file level.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Kafka.Effectful.Consumer.Interpreter (
-    -- * Interpreter
+module Kafka.Effectful.Consumer.Interpreter
+  ( -- * Interpreter
     runKafkaConsumer,
-)
+  )
 where
 
 import Control.Monad (void)
@@ -22,100 +22,99 @@ import Kafka.Consumer (RdKafkaRespErrT (..))
 import Kafka.Consumer qualified as K
 import Kafka.Consumer.ConsumerProperties (ConsumerProperties)
 import Kafka.Consumer.Subscription (Subscription)
-import Kafka.Effectful.Consumer.Classify (
-    PollErrorDisposition (..),
+import Kafka.Effectful.Consumer.Classify
+  ( PollErrorDisposition (..),
     classifyPollError,
     isBenignCommitError,
- )
+  )
 import Kafka.Effectful.Consumer.Effect (KafkaConsumer (..))
 import Kafka.Types (KafkaError (..))
 
-{- | Run the 'KafkaConsumer' effect.
-
-Acquires a consumer handle from the given properties and subscription,
-and releases it when the effect scope ends. Errors are thrown via the
-'Error' effect.
--}
+-- | Run the 'KafkaConsumer' effect.
+--
+-- Acquires a consumer handle from the given properties and subscription,
+-- and releases it when the effect scope ends. Errors are thrown via the
+-- 'Error' effect.
 runKafkaConsumer ::
-    (IOE :> es, Error KafkaError :> es) =>
-    ConsumerProperties ->
-    Subscription ->
-    Eff (KafkaConsumer : es) a ->
-    Eff es a
+  (IOE :> es, Error KafkaError :> es) =>
+  ConsumerProperties ->
+  Subscription ->
+  Eff (KafkaConsumer : es) a ->
+  Eff es a
 runKafkaConsumer props sub action =
-    fst
-        <$> Exception.generalBracket
-            acquire
-            release
-            (\consumer -> interpret (handleConsumer consumer) action)
+  fst
+    <$> Exception.generalBracket
+      acquire
+      release
+      (\consumer -> interpret (handleConsumer consumer) action)
   where
     acquire = do
-        result <- Effectful.liftIO $ K.newConsumer props sub
-        case result of
-            Left err -> throwError err
-            Right consumer -> pure consumer
+      result <- Effectful.liftIO $ K.newConsumer props sub
+      case result of
+        Left err -> throwError err
+        Right consumer -> pure consumer
 
     release consumer = \case
-        ExitCaseSuccess _ -> do
-            mbErr <- Effectful.liftIO $ K.closeConsumer consumer
-            for_ mbErr throwError
-        ExitCaseException _ ->
-            Effectful.liftIO . void $ K.closeConsumer consumer
-        ExitCaseAbort ->
-            Effectful.liftIO . void $ K.closeConsumer consumer
+      ExitCaseSuccess _ -> do
+        mbErr <- Effectful.liftIO $ K.closeConsumer consumer
+        for_ mbErr throwError
+      ExitCaseException _ ->
+        Effectful.liftIO . void $ K.closeConsumer consumer
+      ExitCaseAbort ->
+        Effectful.liftIO . void $ K.closeConsumer consumer
 
 handleConsumer ::
-    (IOE :> es, Error KafkaError :> es) =>
-    K.KafkaConsumer ->
-    EffectHandler KafkaConsumer es
+  (IOE :> es, Error KafkaError :> es) =>
+  K.KafkaConsumer ->
+  EffectHandler KafkaConsumer es
 handleConsumer consumer _env = \case
-    PollMessage timeout -> do
-        result <- Effectful.liftIO $ K.pollMessage consumer timeout
-        case result of
-            Left err -> case classifyPollError err of
-                PollTimeout -> pure Nothing
-                PollBenign -> pure Nothing
-                PollThrow -> throwError err
-            Right msg -> pure (Just msg)
-    PollMessageEither timeout ->
-        Effectful.liftIO $ K.pollMessage consumer timeout
-    PollMessageBatch timeout batchSize ->
-        Effectful.liftIO $ K.pollMessageBatch consumer timeout batchSize
-    CommitOffsetMessage oc cr -> throwOnJustCommit $ K.commitOffsetMessage oc consumer cr
-    CommitAllOffsets oc -> throwOnJustCommit $ K.commitAllOffsets oc consumer
-    CommitPartitionsOffsets oc tps -> throwOnJustCommit $ K.commitPartitionsOffsets oc consumer tps
-    StoreOffsets tps -> throwOnJust $ K.storeOffsets consumer tps
-    StoreOffsetMessage cr -> throwOnJust $ K.storeOffsetMessage consumer cr
-    Assign tps -> throwOnJust $ K.assign consumer tps
-    PausePartitions parts ->
-        throwOnKafkaErr (K.pausePartitions consumer parts)
-    ResumePartitions parts ->
-        throwOnKafkaErr (K.resumePartitions consumer parts)
-    SeekPartitions tps timeout -> throwOnJust $ K.seekPartitions consumer tps timeout
-    Committed timeout parts -> throwOnLeft $ K.committed consumer timeout parts
-    Position parts -> throwOnLeft $ K.position consumer parts
-    Assignment -> throwOnLeft $ K.assignment consumer
-    Subscription -> throwOnLeft $ K.subscription consumer
-    AskConsumerHandle -> pure consumer
+  PollMessage timeout -> do
+    result <- Effectful.liftIO $ K.pollMessage consumer timeout
+    case result of
+      Left err -> case classifyPollError err of
+        PollTimeout -> pure Nothing
+        PollBenign -> pure Nothing
+        PollThrow -> throwError err
+      Right msg -> pure (Just msg)
+  PollMessageEither timeout ->
+    Effectful.liftIO $ K.pollMessage consumer timeout
+  PollMessageBatch timeout batchSize ->
+    Effectful.liftIO $ K.pollMessageBatch consumer timeout batchSize
+  CommitOffsetMessage oc cr -> throwOnJustCommit $ K.commitOffsetMessage oc consumer cr
+  CommitAllOffsets oc -> throwOnJustCommit $ K.commitAllOffsets oc consumer
+  CommitPartitionsOffsets oc tps -> throwOnJustCommit $ K.commitPartitionsOffsets oc consumer tps
+  StoreOffsets tps -> throwOnJust $ K.storeOffsets consumer tps
+  StoreOffsetMessage cr -> throwOnJust $ K.storeOffsetMessage consumer cr
+  Assign tps -> throwOnJust $ K.assign consumer tps
+  PausePartitions parts ->
+    throwOnKafkaErr (K.pausePartitions consumer parts)
+  ResumePartitions parts ->
+    throwOnKafkaErr (K.resumePartitions consumer parts)
+  SeekPartitions tps timeout -> throwOnJust $ K.seekPartitions consumer tps timeout
+  Committed timeout parts -> throwOnLeft $ K.committed consumer timeout parts
+  Position parts -> throwOnLeft $ K.position consumer parts
+  Assignment -> throwOnLeft $ K.assignment consumer
+  Subscription -> throwOnLeft $ K.subscription consumer
+  AskConsumerHandle -> pure consumer
   where
     throwOnJust action' = do
-        mbErr <- Effectful.liftIO action'
-        for_ mbErr throwError
+      mbErr <- Effectful.liftIO action'
+      for_ mbErr throwError
 
     -- Commits get their own thrower: "nothing to commit" is a success.
     throwOnJustCommit action' = do
-        mbErr <- Effectful.liftIO action'
-        for_ mbErr $ \err ->
-            if isBenignCommitError err then pure () else throwError err
+      mbErr <- Effectful.liftIO action'
+      for_ mbErr $ \err ->
+        if isBenignCommitError err then pure () else throwError err
 
     throwOnLeft action' = do
-        result <- Effectful.liftIO action'
-        case result of
-            Left err -> throwError err
-            Right a -> pure a
+      result <- Effectful.liftIO action'
+      case result of
+        Left err -> throwError err
+        Right a -> pure a
 
     throwOnKafkaErr action' = do
-        err <- Effectful.liftIO action'
-        case err of
-            KafkaResponseError RdKafkaRespErrNoError -> pure ()
-            _ -> throwError err
+      err <- Effectful.liftIO action'
+      case err of
+        KafkaResponseError RdKafkaRespErrNoError -> pure ()
+        _ -> throwError err
