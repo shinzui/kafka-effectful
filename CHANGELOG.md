@@ -4,7 +4,7 @@ All notable changes to `kafka-effectful` are documented here.
 
 This package follows the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
-## Unreleased
+## 0.3.1.0 — 2026-09-15
 
 ### Fixed
 
@@ -72,6 +72,19 @@ This package follows the [Haskell Package Versioning Policy](https://pvp.haskell
   taxonomy, brokerless interpreter behaviour, and trace-context hygiene.
 
 ### Other Changes
+
+- Detecting a fatal consumer error in `CallbackPollModeAsync` requires a
+  patched `hw-kafka-client`. Hackage 5.3.0 drops consumer-queue messages in
+  `pollConsumerEvents'`, and librdkafka delivers a raised fatal error to the
+  high-level consumer only on that queue — never through `error_cb` — so in the
+  default async mode a fatal such as a fenced static group member is
+  unobservable at every layer and the application polls forever. This
+  repository pins a fork that reports it in-band from `pollMessage` /
+  `pollMessageBatch`, which is what lets `Kafka.Effectful.Consumer.Classify`
+  see the fatal and throw. The pin governs builds of this repository only: a
+  downstream package does not inherit it and must add the same
+  `source-repository-package` stanza to its own `cabal.project`, or it silently
+  keeps async-mode fatal blindness. Sync-mode consumers are unaffected.
 
 - Support `effectful-core` 2.7 (upper bound raised from `<2.7` to `<2.8`).
   Built and tested against 2.7.1.2; no source changes were needed.
