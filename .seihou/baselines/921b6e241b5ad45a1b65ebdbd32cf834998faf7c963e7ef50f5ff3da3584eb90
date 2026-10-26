@@ -15,3 +15,4 @@ cabal.project.local
 db/
 result
 result-*
+.codex/
